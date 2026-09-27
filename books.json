@@ -1,0 +1,334 @@
+{
+ "subjects": {
+  "mat": "Matematika",
+  "rus": "Rus tili",
+  "crh": "Qırımtatar tili",
+  "oqu": "Edebiy oquv",
+  "etr": "Etraf dünya",
+  "eng": "İngliz tili",
+  "tar": "Tarih",
+  "bio": "Biologiya",
+  "edb": "Edebiyat",
+  "cog": "Coğrafiya",
+  "alg": "Algebra",
+  "geo": "Geometriya",
+  "fiz": "Fizika",
+  "kim": "Kimya",
+  "inf": "İnformatika",
+  "num": "Numune"
+ },
+ "books": [
+  {
+   "id": "5-numune",
+   "grade": 5,
+   "subject": "num",
+   "part": "",
+   "author": "sınav",
+   "file": "books/numune.pdf"
+  },
+  {
+   "id": "1-mat-1",
+   "grade": 1,
+   "subject": "mat",
+   "part": "1",
+   "author": "Moro",
+   "file": ""
+  },
+  {
+   "id": "1-rus",
+   "grade": 1,
+   "subject": "rus",
+   "part": "",
+   "author": "Kanakina",
+   "file": ""
+  },
+  {
+   "id": "1-oqu",
+   "grade": 1,
+   "subject": "oqu",
+   "part": "",
+   "author": "Klimanova",
+   "file": ""
+  },
+  {
+   "id": "1-etr",
+   "grade": 1,
+   "subject": "etr",
+   "part": "",
+   "author": "Pleşakov",
+   "file": ""
+  },
+  {
+   "id": "2-mat-1",
+   "grade": 2,
+   "subject": "mat",
+   "part": "1",
+   "author": "Moro",
+   "file": ""
+  },
+  {
+   "id": "2-rus",
+   "grade": 2,
+   "subject": "rus",
+   "part": "",
+   "author": "Kanakina",
+   "file": ""
+  },
+  {
+   "id": "2-eng",
+   "grade": 2,
+   "subject": "eng",
+   "part": "",
+   "author": "Bıkova",
+   "file": ""
+  },
+  {
+   "id": "2-etr",
+   "grade": 2,
+   "subject": "etr",
+   "part": "",
+   "author": "Pleşakov",
+   "file": ""
+  },
+  {
+   "id": "3-mat",
+   "grade": 3,
+   "subject": "mat",
+   "part": "",
+   "author": "Moro",
+   "file": ""
+  },
+  {
+   "id": "3-oqu",
+   "grade": 3,
+   "subject": "oqu",
+   "part": "",
+   "author": "Klimanova",
+   "file": ""
+  },
+  {
+   "id": "3-eng",
+   "grade": 3,
+   "subject": "eng",
+   "part": "",
+   "author": "Bıkova",
+   "file": ""
+  },
+  {
+   "id": "4-mat",
+   "grade": 4,
+   "subject": "mat",
+   "part": "",
+   "author": "Moro",
+   "file": ""
+  },
+  {
+   "id": "4-rus",
+   "grade": 4,
+   "subject": "rus",
+   "part": "",
+   "author": "Kanakina",
+   "file": ""
+  },
+  {
+   "id": "4-etr",
+   "grade": 4,
+   "subject": "etr",
+   "part": "",
+   "author": "Pleşakov",
+   "file": ""
+  },
+  {
+   "id": "5-mat-1",
+   "grade": 5,
+   "subject": "mat",
+   "part": "1",
+   "author": "Vilenkin",
+   "file": ""
+  },
+  {
+   "id": "5-rus-1",
+   "grade": 5,
+   "subject": "rus",
+   "part": "1",
+   "author": "Ladıjenskaya",
+   "file": ""
+  },
+  {
+   "id": "5-crh",
+   "grade": 5,
+   "subject": "crh",
+   "part": "",
+   "author": "",
+   "file": ""
+  },
+  {
+   "id": "5-tar",
+   "grade": 5,
+   "subject": "tar",
+   "part": "",
+   "author": "Vigasin",
+   "file": ""
+  },
+  {
+   "id": "5-edb",
+   "grade": 5,
+   "subject": "edb",
+   "part": "",
+   "author": "Korovina",
+   "file": ""
+  },
+  {
+   "id": "5-eng",
+   "grade": 5,
+   "subject": "eng",
+   "part": "",
+   "author": "Vaulina",
+   "file": ""
+  },
+  {
+   "id": "5-bio",
+   "grade": 5,
+   "subject": "bio",
+   "part": "",
+   "author": "Paseçnik",
+   "file": ""
+  },
+  {
+   "id": "6-mat",
+   "grade": 6,
+   "subject": "mat",
+   "part": "",
+   "author": "Vilenkin",
+   "file": ""
+  },
+  {
+   "id": "6-tar",
+   "grade": 6,
+   "subject": "tar",
+   "part": "",
+   "author": "Arsentyev",
+   "file": ""
+  },
+  {
+   "id": "6-cog",
+   "grade": 6,
+   "subject": "cog",
+   "part": "",
+   "author": "Alekseyev",
+   "file": ""
+  },
+  {
+   "id": "7-alg",
+   "grade": 7,
+   "subject": "alg",
+   "part": "",
+   "author": "Makarıçev",
+   "file": ""
+  },
+  {
+   "id": "7-geo",
+   "grade": 7,
+   "subject": "geo",
+   "part": "",
+   "author": "Atanasyan",
+   "file": ""
+  },
+  {
+   "id": "7-fiz",
+   "grade": 7,
+   "subject": "fiz",
+   "part": "",
+   "author": "Perışkin",
+   "file": ""
+  },
+  {
+   "id": "7-inf",
+   "grade": 7,
+   "subject": "inf",
+   "part": "",
+   "author": "Bosova",
+   "file": ""
+  },
+  {
+   "id": "8-alg",
+   "grade": 8,
+   "subject": "alg",
+   "part": "",
+   "author": "Makarıçev",
+   "file": ""
+  },
+  {
+   "id": "8-kim",
+   "grade": 8,
+   "subject": "kim",
+   "part": "",
+   "author": "Gabrielyan",
+   "file": ""
+  },
+  {
+   "id": "8-fiz",
+   "grade": 8,
+   "subject": "fiz",
+   "part": "",
+   "author": "Perışkin",
+   "file": ""
+  },
+  {
+   "id": "9-alg",
+   "grade": 9,
+   "subject": "alg",
+   "part": "",
+   "author": "Makarıçev",
+   "file": ""
+  },
+  {
+   "id": "9-kim",
+   "grade": 9,
+   "subject": "kim",
+   "part": "",
+   "author": "Gabrielyan",
+   "file": ""
+  },
+  {
+   "id": "9-edb",
+   "grade": 9,
+   "subject": "edb",
+   "part": "",
+   "author": "Korovina",
+   "file": ""
+  },
+  {
+   "id": "10-alg",
+   "grade": 10,
+   "subject": "alg",
+   "part": "",
+   "author": "Alimov",
+   "file": ""
+  },
+  {
+   "id": "10-fiz",
+   "grade": 10,
+   "subject": "fiz",
+   "part": "",
+   "author": "Myakişev",
+   "file": ""
+  },
+  {
+   "id": "11-fiz",
+   "grade": 11,
+   "subject": "fiz",
+   "part": "",
+   "author": "Myakişev",
+   "file": ""
+  },
+  {
+   "id": "11-tar",
+   "grade": 11,
+   "subject": "tar",
+   "part": "",
+   "author": "Soroko-Tsyupa",
+   "file": ""
+  }
+ ]
+}
