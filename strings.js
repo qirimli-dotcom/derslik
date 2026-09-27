@@ -25,6 +25,7 @@ window.L = {
 
   // Kiriş ve qayd
   login: "Kiriş", doLogin: "Kir", register: "Qayd ol", logout: "Çıq",
+  noAcc: "Hesabıñız yoqmı?", haveAcc: "Hesabıñız barmı?",
   username: "Login", password: "Parol", password2: "Parolnı tekrarlañız",
   name: "Adıñız", surname: "Soyadıñız", letter: "Harf",
   usernameHint: "Latin arifleri ve raqamlar, meselâ ali.5a",

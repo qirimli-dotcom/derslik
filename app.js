@@ -160,18 +160,21 @@ const sel = (name, label, opts, v) => `<label class="fld"><span>${esc(label)}</s
 const U_ATTR = 'required autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="32"';
 function showAuth(mode, msg) {
   const reg = mode === "register";
-  authFrame(`<div class="seg"><button data-auth="login" class="${reg ? "" : "on"}">${esc(L.login)}</button><button data-auth="register" class="${reg ? "on" : ""}">${esc(L.register)}</button></div>` +
-    (reg ? `<form class="form" id="fReg" autocomplete="off">
+  authFrame(reg ? `<form class="form" id="fReg" autocomplete="off">
+      <h2 class="ftitle">${esc(L.register)}</h2>
       <div class="two">${fld("n", L.name, 'required maxlength="40"')}${fld("s", L.surname, 'required maxlength="60"')}</div>
       <div class="two">${sel("g", L.gradeLbl, GRADES, 5)}${sel("l", L.letter, LETTERS, "A")}</div>
       ${fld("u", L.username, U_ATTR, L.usernameHint)}
       ${fld("p", L.password, 'type="password" required minlength="8" autocomplete="new-password"')}
       ${fld("p2", L.password2, 'type="password" required minlength="8" autocomplete="new-password"')}
-      <div class="err" id="aErr"></div><button class="btn-main" type="submit">${esc(L.makeApp)}</button></form>`
+      <div class="err" id="aErr"></div><button class="btn-main" type="submit">${esc(L.makeApp)}</button></form>
+      <p class="alink">${esc(L.haveAcc)} <button type="button" data-auth="login">${esc(L.login)}</button></p>`
     : `<form class="form" id="fLogin">
       ${fld("u", L.username, U_ATTR + ' autocomplete="username"')}
       ${fld("p", L.password, 'type="password" required autocomplete="current-password"')}
-      <div class="err" id="aErr">${esc(msg || "")}</div><button class="btn-main" type="submit">${esc(L.doLogin)}</button></form>`));
+      <div class="err" id="aErr">${esc(msg || "")}</div><button class="btn-main" type="submit">${esc(L.doLogin)}</button></form>
+      <p class="alink">${esc(L.noAcc)} <button type="button" data-auth="register">${esc(L.register)}</button></p>`);
+  window.scrollTo(0, 0); $("#auth").scrollTop = 0;
 }
 function showSetup() {
   const h = location.hostname, seg = location.pathname.split("/").filter(Boolean)[0] || "";

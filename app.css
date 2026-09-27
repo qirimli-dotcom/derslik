@@ -224,3 +224,6 @@ h1,h2{font-family:var(--d);font-weight:700;letter-spacing:-.02em;margin:0;line-h
 .qrbox{width:210px;max-width:100%;margin:0 auto;background:#fff;border-radius:12px;padding:6px}
 .qrbox svg{width:100%;height:auto;display:block}
 .btn-main.share{background:#1FA855}
+.ftitle{font-size:20px;margin:0 0 2px}
+.alink{text-align:center;margin:0;color:var(--muted);font-size:15px}
+.alink button{color:var(--accent);font-weight:600;font-size:15px;padding:10px 4px;text-decoration:underline;text-underline-offset:3px}
