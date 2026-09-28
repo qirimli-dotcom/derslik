@@ -145,6 +145,20 @@
    "t": "Русский язык 5 sinif",
    "c": "covers/mul10gickUms.jpg",
    "cv": 1
+  },
+  {
+   "id": "mul2ipq03-yM",
+   "g": 5,
+   "subject": "tar",
+   "part": "",
+   "author": "Medinskiy",
+   "f": "books/g5/mul2ipq03-yM.bin",
+   "kv": 2,
+   "size": 18549887,
+   "t": "История древнего мира 5 sinif",
+   "n": 5,
+   "c": "covers/mul2ipq03-yM.jpg",
+   "cv": 1
   }
  ]
 }
