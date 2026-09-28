@@ -38,6 +38,7 @@ window.L = {
   login: "Kiriş", doLogin: "Kir", register: "Qayd ol", logout: "Çıq",
   noAcc: "Hesabıñız yoqmı?", haveAcc: "Hesabıñız barmı?",
   iAm: "Kimsiñiz?", cabinet: "İdare kabineti",
+  viewAs: n => n + " kibi körünüş", viewAsBtn: "Talebe kibi kör", viewAsNote: "Bu — talebeniñ körgeni. Onıñ belgileri ve oquv ilerleyişi tek öz telefonında saqlana, bu yerde körünmey.",
   school: "Mektep", pickSchool: "Mektebiñizni saylañız", errSchool: "Mektebiñizni saylañız",
   profile: "Profil", profileHint: "Sınıf ya da mektep yañlış olsa, ocañızğa ya da idarecige aytıñız.",
   passSent: "Arıza yiberildi. İdareci tasdıqlağan soñ yañı parol işlep başlar.", passChanged: "Parol deñiştirildi",

@@ -132,7 +132,20 @@ async function doLogin(f) {
 }
 
 // ============ ПРИЛОЖЕНИЕ ============
+// ---------- просмотр «глазами ученика» для администратора: ?as=логин
+let realMe = null;
+function applyAs() {
+  const id = new URLSearchParams(location.search).get("as");
+  const base = realMe || me;
+  if (!id || !base || base.r !== "admin") { if (realMe) { me = realMe; realMe = null; } return; }
+  const t = USERS.users.find(x => x.u === id);
+  if (!t) return;
+  realMe = base; me = t; grade = t.r === "student" ? t.g : grade;
+}
+const viewAs = () => !!realMe;
+function exitAs() { location.href = location.pathname; }
 function enterApp() {
+  applyAs();
   $("#auth").hidden = true; $("#app").hidden = false;
   grade = isStaff() ? store.get("grade", 5) : me.g;
   syncDownloads().then(render); render();
@@ -146,6 +159,11 @@ function fillStatic() {
 }
 function renderChrome() {
   if (!me) return;
+  let ban = $("#asBanner");
+  if (viewAs()) {
+    if (!ban) { ban = document.createElement("div"); ban.id = "asBanner"; ban.className = "asban"; document.body.prepend(ban); }
+    ban.innerHTML = `${ico("user")}<span>${esc(L.viewAs(fullName(me)))}</span><button data-exitas>${esc(L.close)}</button>`;
+  } else if (ban) ban.remove();
   // профиль — по аватару сверху (на телефоне) и карточке слева (на планшете); внизу 4-я вкладка — Yardım
   const tabs = [["shelf", "shelf", L.tabShelf], ["offline", "down", L.tabOffline], ["marks", "mark", L.tabMarks], ["help", "help", L.help]];
   $("#tabs").innerHTML = tabs.map(([v, i, t]) => `<button class="tab ${view === v ? "on" : ""}" data-view="${v}">${ico(i)}${esc(t)}</button>`).join("");
@@ -246,7 +264,7 @@ function renderProfile() {
   $("#view").innerHTML = `<h1 data-prof>${esc(L.profile)}</h1>
     <div class="pcard"><div class="av big">${esc(initials(me))}</div><div><h2>${esc(fullName(me))}</h2><p class="muted" style="margin:4px 0 0">${esc([L.roles[me.r], schoolName(me.sc)].filter(Boolean).join(" · "))}</p></div></div>
     <div class="form">${me.r === "student" ? row(L.gradeLbl, L.cls(me.g, me.l)) : ""}${row(L.username, me.u)}${row(L.booksAdm, String(mine))}${row(L.tabOffline, String(downloaded.size))}</div>
-    <div class="plist">
+    ${viewAs() ? `<p class="muted" style="margin:0">${esc(L.viewAsNote)}</p>` : `<div class="plist">
       ${item("user", L.fixReq, `<form id="fFix" class="pform">
         <div class="two">${fld("n", L.name, `required maxlength="40" value="${esc(me.n || "")}"`)}${fld("s", L.surname, `required maxlength="60" value="${esc(me.s || "")}"`)}</div>
         ${(SCH.schools || []).length ? sel("sc", L.school, [["", L.pickSchool]].concat(SCH.schools.map(x => [x.id, x.name])), me.sc || "") : ""}
@@ -259,7 +277,7 @@ function renderProfile() {
       ${item("lang", L.lang + ": " + L.langName, "", "disabled")}
       ${me.r === "admin" ? item("shield", L.cabinet, "", "data-cabinet") : ""}
     </div>
-    <div class="plist">${item("out", L.logout, "", "data-logout", "danger")}</div>`;
+    <div class="plist">${item("out", L.logout, "", "data-logout", "danger")}</div>`}`;
 }
 async function sendFix(f) {   // просьба исправить имя / школу / класс — меняет администратор
   const d = Object.fromEntries(new FormData(f).entries()), err = $("#fixErr"), btn = f.querySelector("button[type=submit]");
@@ -434,6 +452,7 @@ document.addEventListener("click", async e => {
   const t = e.target.closest("button,[data-open]"); if (!t) return;
   const d = t.dataset;
   if (d.auth) { if (d.auth === "register") await loadData().catch(() => {}); showAuth(d.auth); }
+  else if (d.exitas !== undefined || (d.logout !== undefined && viewAs())) exitAs();
   else if (d.logout !== undefined) { if (confirm(L.logout + "?")) wipe(); }
   else if (d.cabinet !== undefined) location.href = K.BASE + "admin/";
   else if (d.share !== undefined) { const p = await idb.get("pending"), url = requestLink(p.req);
@@ -483,7 +502,9 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && S)
 
 async function refresh() {
   try { await loadData(); } catch (e) { return; }
+  if (realMe) { me = realMe; realMe = null; }
   if (!(await syncKeys())) return wipe(L.wiped);
+  applyAs();
   await syncDownloads(); render();
 }
 fillStatic();

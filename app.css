@@ -305,3 +305,11 @@ button.pitem:disabled::after{content:""}
   .names span{font-size:13px}.names b{font-size:14px}.names i{font-size:12px}
   .cover b{font-size:15px}
 }
+.asban{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:10px;padding:calc(8px + var(--st)) 16px 8px;background:#F2A33A;color:#1B2233;font-weight:600;font-size:14px}
+.asban span{flex:1}
+.asban button{height:34px;padding:0 14px;border-radius:10px;background:#1B2233;color:#fff;font-size:13px;font-weight:600}
+a.btn-ghost{text-decoration:none;color:var(--ink)}
+.asban{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:10px;padding:calc(8px + var(--st)) 16px 8px;background:#F2A33A;color:#1B2233;font-weight:600;font-size:14px}
+.asban span{flex:1}
+.asban button{height:34px;padding:0 14px;border-radius:10px;background:#1B2233;color:#fff;font-size:13px;font-weight:600}
+a.btn-ghost{text-decoration:none;color:var(--ink)}
