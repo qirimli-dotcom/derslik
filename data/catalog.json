@@ -15,6 +15,19 @@
  },
  "books": [
   {
+   "id": "mukzohdd-fHC",
+   "g": 5,
+   "subject": "bio",
+   "part": "",
+   "author": "V. V. Paseçnik",
+   "f": "books/g5/mukzohdd-fHC.bin",
+   "kv": 2,
+   "size": 21838768,
+   "t": "Биология 5 sinif",
+   "c": "covers/mukzohdd-fHC.jpg",
+   "cv": 1
+  },
+  {
    "id": "mukyllihIZ18",
    "g": 5,
    "subject": "eng",
