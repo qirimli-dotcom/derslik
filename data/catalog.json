@@ -78,6 +78,19 @@
    "t": "Русский язык 5 sinif",
    "c": "covers/mul0tn5cTCxA.jpg",
    "cv": 1
+  },
+  {
+   "id": "mul10gickUms",
+   "g": 5,
+   "subject": "rus",
+   "part": "2",
+   "author": "Laduzheskaja",
+   "f": "books/g5/mul10gickUms.bin",
+   "kv": 2,
+   "size": 19543885,
+   "t": "Русский язык 5 sinif",
+   "c": "covers/mul10gickUms.jpg",
+   "cv": 1
   }
  ]
 }
