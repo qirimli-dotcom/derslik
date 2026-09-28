@@ -25,6 +25,13 @@ window.L = {
   iosSafariSteps: ["Safari-de aşağıdaki (iPad-de yuqarıdaki) [share] «Поделиться» düğmesine basıñız", "Menüni aşağı çekip «На экран Домой» saylañız", "Yuqarıda «Добавить» basıñız — ekranda «Çantam» belgisi peyda olur"],
   iosChromeSteps: ["Chrome-da adres satırında [share] «Поделиться» düğmesine basıñız", "«На экран Домой» saylañız", "«Добавить» basıñız — ekranda «Çantam» belgisi peyda olur"],
   otherSteps: ["Brauzer menüsini açıñız (⋮ ya da ⋯)", "«Установить приложение» ya da «Добавить на главный экран» saylañız", "Tasdıqlañız — ekranda «Çantam» belgisi peyda olur"],
+  guide: [
+    ["book", "Derslikni oqumaq", ["Raf bölüminde derslikniñ qapağına basıñız", "Saifelerni barmaq ile solğa-sağğa sürtip ya da ‹ › düğmeleri ile çeviriñiz", "Aşağıdaki çizgi ile kerekli saifege tez keçip olasıñız", "Planşetni yatqızsañız, eki saife yan-yana — kitap kibi açılır"]],
+    ["down", "İnternetsiz oqumaq", ["Derslikni açıñız", "Yuqarıda «Yükle» belgisine basıñız", "Qapaqta ✓ belgisi peyda olsa — derslik telefonda saqlandı", "Endi internet olmasa da açılır. Bu derslikler «İnternetsiz» bölüminde"]],
+    ["mark", "Belgiler", ["Kerekli saifede yuqarıdaki belgi düğmesine basıñız", "«Belgiler» bölüminden o saifege bir basmaq ile qaytıñız", "Belgiler tek bu telefonda saqlana"]],
+    ["user", "Profil ve parol", ["«Profil» bölüminde adıñız, mektebiñiz ve sınıfıñız körüne", "Yañlış olsa — «Maalümatnı tüzet» basıñız, idareci tasdıqlar", "Parolnı deñiştirmek içün — «Parolnı deñiştir», idareci tasdıqlağan soñ yañı parol işler"]],
+    ["help", "Bir şey işlemese", ["Uyğulamanı qapatıp, yañıdan açıñız (bazıda eki kere)", "Kompyuterde Ctrl+Shift+R basıñız", "Yañı derslikler bir-eki daqiqadan soñ peyda ola", "Yardım kerek olsa — ocañızğa ya da idarecige muracaat etiñiz"]]
+  ],
   helpText: ["Dersligiñni aç ve oqu.", "«Yükle» — internetsiz oqumaq içün.", "Belgi — kerekli saifeni saqla."],
 
   // Kiriş ve qayd

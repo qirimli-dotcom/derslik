@@ -267,3 +267,11 @@ img.mini{object-fit:cover;background:var(--soft)}
 .install .btn{flex-shrink:0}
 .install .ib{background:transparent}
 .steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:12px;font-size:16px;line-height:1.45}
+.guide summary{cursor:pointer;display:flex;align-items:center;gap:10px;font-weight:600;font-size:16px;list-style:none}
+.guide summary::-webkit-details-marker{display:none}
+.guide summary svg{color:var(--accent)}
+.guide summary span{flex:1}
+.guide summary::after{content:"›";font-size:22px;color:#8A93A8;transition:transform .15s}
+.guide[open] summary::after{transform:rotate(90deg)}
+.gbody{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.guide{gap:0;padding:16px 18px}

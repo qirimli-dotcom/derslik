@@ -178,11 +178,12 @@ function contHtml() {
     return `<button class="cont" data-open="${esc(r.id)}"><div class="mini" style="--c:${color(r.b)}"></div><div class="t"><small>${esc(L.cont)}</small><b>${esc(title(r.b))}</b><div class="bar"><i style="width:${pct}%"></i></div><small>${esc(L.page)} ${r.page}${r.total ? " / " + r.total : ""}</small></div></button>`; }).join("")}</div>`;
 }
 let deferredPrompt = null;
+const installed = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone;
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 function installHtml() {
-  if (matchMedia("(display-mode: standalone)").matches || navigator.standalone || store.get("noinstall", 0)) return "";
+  if (installed()) return "";
   return `<div class="install"><svg class="logo"><use href="#logo"/></svg><div class="t"><b>${esc(L.install)}</b><br><span class="muted">${esc(L.installText)}</span></div>
-    <button class="btn" data-install>${esc(L.installBtn)}</button><button class="ib" data-noinstall aria-label="${esc(L.close)}">${ico("x")}</button></div>`;
+    <button class="btn" data-install>${esc(L.installBtn)}</button></div>`;
 }
 // iOS не даёт сайту ставить себя кнопкой — показываем, куда нажать
 const SHARE_ICO = `<svg viewBox="0 0 24 24" style="width:20px;height:20px;vertical-align:-4px;fill:none;stroke:#2F5BD3;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M12 3v12M8 7l4-4 4 4M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/></svg>`;
@@ -204,7 +205,7 @@ function renderShelf() {
   const head = wide.matches ? `<div class="hello"><div><h1>${esc(isStaff() ? clsName : L.tabShelf)}</h1><p>${esc(L.books(count))}</p></div>${searchHtml()}</div>`
     : `<div class="hello"><div><h1>${esc(L.hello + ", " + (me.n || "") + "!")}</h1><p>${esc(clsName + ", " + L.books(count))}</p></div>${searchHtml()}</div>`;
   const chips = isStaff() ? `<div class="chips">${GRADES.map(g => `<button class="chip ${g === grade ? "on" : ""}" data-grade="${g}">${g === grade ? esc(L.grade(g)) : g}</button>`).join("")}</div>` : "";
-  $("#view").innerHTML = head + chips + (q ? "" : contHtml()) + (list.length ? shelvesHtml(list) : `<p class="empty">${esc(q ? L.nothing : L.soonText)}</p>`) + installHtml();
+  $("#view").innerHTML = head + chips + (q ? "" : contHtml()) + (list.length ? shelvesHtml(list) : `<p class="empty">${esc(q ? L.nothing : L.soonText)}</p>`);
   const inp = $("#q"); if (inp && renderShelf.focus) { inp.focus(); inp.setSelectionRange(99, 99); }
   const chipOn = $(".chips .chip.on"); if (chipOn) chipOn.scrollIntoView({ inline: "center", block: "nearest" });
 }
@@ -217,7 +218,15 @@ function renderMarks() {
   $("#view").innerHTML = `<h1>${esc(L.tabMarks)}</h1>` + (marks.length ? `<div class="list">${marks.map((m, i) => `<div class="item"><div class="mini" style="--c:${color(m.b)}"></div><button class="t" data-open="${esc(m.id)}" data-page="${m.page}">${esc(title(m.b))}<small>${esc(L.grade(m.b.g))}, ${esc(L.page)} ${m.page}</small></button><button class="ib" data-unmark="${i}" aria-label="${esc(L.delMark)}">${ico("trash")}</button></div>`).join("")}</div>` : `<p class="empty">${esc(L.marksEmpty)}</p>`);
 }
 function renderHelp() {
-  $("#view").innerHTML = `<h1>${esc(L.help)}</h1><div class="list">${L.helpText.map(t => `<div class="item"><div class="t">${esc(t)}</div></div>`).join("")}</div>${installHtml()}<p class="muted">${esc(L.app)} — ${esc(L.slogan)} · v${K.VER}</p>`;
+  // инструкции: раскрывающиеся блоки; «Ekranğa qoş» — первым, пока приложение не установлено
+  const installed = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  const steps = isIOS() ? (/crios/i.test(navigator.userAgent) ? L.iosChromeSteps : L.iosSafariSteps) : L.otherSteps;
+  const block = (icon, t, body, open) => `<details class="form guide" ${open ? "open" : ""}><summary>${ico(icon)}<span>${esc(t)}</span></summary><div class="gbody">${body}</div></details>`;
+  const ol = arr => `<ol class="steps">${arr.map(x => `<li>${esc(x).replace("[share]", SHARE_ICO)}</li>`).join("")}</ol>`;
+  $("#view").innerHTML = `<h1>${esc(L.help)}</h1>` +
+    (installed ? "" : block("down", L.install, `<p class="muted" style="margin:0">${esc(L.installText)}</p>${ol(steps)}${deferredPrompt ? `<button class="btn-main" data-install>${esc(L.install)}</button>` : ""}`, true)) +
+    L.guide.map(g => block(g[0], g[1], ol(g[2]))).join("") +
+    `<p class="muted" style="text-align:center">${esc(L.app)} — ${esc(L.slogan)} · v${K.VER}</p>`;
 }
 function renderProfile() {
   const row = (k, v) => v ? `<div class="prow"><span>${esc(k)}</span><b>${esc(v)}</b></div>` : "";
@@ -235,6 +244,7 @@ function renderProfile() {
     <form class="form" id="fPw"><h2 class="ftitle">${esc(L.changePass)}</h2>
       ${fld("p", L.newPass, 'type="password" required minlength="8" autocomplete="new-password"')}${fld("p2", L.password2, 'type="password" required minlength="8" autocomplete="new-password"')}
       <div class="err" id="pwErr"></div><button class="btn-main" type="submit">${esc(L.changePass)}</button></form>
+    <button class="btn-ghost" data-mview="help">${ico("help")} ${esc(L.help)}</button>
     <button class="btn-ghost" data-logout>${ico("out")} ${esc(L.logout)}</button>`;
 }
 async function sendFix(f) {   // просьба исправить имя / школу / класс — меняет администратор
@@ -276,6 +286,7 @@ function openMenu() {
     (rb && S.keys[rb.g] ? row(`data-mopen="${esc(rb.id)}"`, "book", L.cont, title(rb) + ", " + L.page + " " + rec.page) : "") +
     row('data-mview="offline"', "down", L.tabOffline, "", view === "offline") + row('data-mview="marks"', "mark", L.tabMarks, "", view === "marks") +
     (me.r === "admin" ? row("data-cabinet", "shield", L.cabinet, "") : "") +
+    (installed() ? "" : row("data-install", "down", L.install, L.installText)) +
     row('data-mview="help"', "lang", L.lang, L.langName) + row('data-mview="help"', "help", L.help, "", view === "help") + row("data-logout", "out", L.logout, "");
   $("#menu").hidden = false;
 }
@@ -422,7 +433,7 @@ document.addEventListener("click", async e => {
   else if (d.mopen) openBook(d.mopen);
   else if (d.undl) undownload(d.undl);
   else if (d.unmark) { const m = store.get("marks", []); m.splice(+d.unmark, 1); store.set("marks", m); render(); }
-  else if (d.install !== undefined) { if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; } else installHelp(); }
+  else if (d.install !== undefined) { closeMenu(); if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; } else installHelp(); }
   else if (d.noinstall !== undefined) { store.set("noinstall", 1); render.force = true; render(); }
   else if (d.closemodal !== undefined) $("#modal").hidden = true;
 });
