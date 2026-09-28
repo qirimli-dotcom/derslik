@@ -65,6 +65,19 @@
    "t": "Математика 5 sinif",
    "c": "covers/mul0em3zt8ih.jpg",
    "cv": 1
+  },
+  {
+   "id": "mul0tn5cTCxA",
+   "g": 5,
+   "subject": "rus",
+   "part": "1",
+   "author": "Laduzheskaja",
+   "f": "books/g5/mul0tn5cTCxA.bin",
+   "kv": 2,
+   "size": 16949519,
+   "t": "Русский язык 5 sinif",
+   "c": "covers/mul0tn5cTCxA.jpg",
+   "cv": 1
   }
  ]
 }
