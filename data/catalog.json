@@ -39,6 +39,19 @@
    "t": "Spotlight 5 sinif 2023",
    "c": "covers/mukyllihIZ18.jpg",
    "cv": 1
+  },
+  {
+   "id": "mul0aujcTU1B",
+   "g": 5,
+   "subject": "mat",
+   "part": "1",
+   "author": "Vilenkin",
+   "f": "books/g5/mul0aujcTU1B.bin",
+   "kv": 2,
+   "size": 12495817,
+   "t": "Математика",
+   "c": "covers/mul0aujcTU1B.jpg",
+   "cv": 1
   }
  ]
 }
