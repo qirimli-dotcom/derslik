@@ -146,14 +146,15 @@ function fillStatic() {
 }
 function renderChrome() {
   if (!me) return;
-  const tabs = [["shelf", "shelf", L.tabShelf], ["offline", "down", L.tabOffline], ["marks", "mark", L.tabMarks], ["profile", "user", L.profile]];
+  // профиль — по аватару сверху (на телефоне) и карточке слева (на планшете); внизу 4-я вкладка — Yardım
+  const tabs = [["shelf", "shelf", L.tabShelf], ["offline", "down", L.tabOffline], ["marks", "mark", L.tabMarks], ["help", "help", L.help]];
   $("#tabs").innerHTML = tabs.map(([v, i, t]) => `<button class="tab ${view === v ? "on" : ""}" data-view="${v}">${ico(i)}${esc(t)}</button>`).join("");
   $("#menuBtn").innerHTML = esc(initials(me)); $("#menuBtn").classList.toggle("on", view === "profile");
   $("#sideUser").innerHTML = `<span class="av">${esc(initials(me))}</span><span class="t"><b>${esc(fullName(me))}</b>${schoolName(me.sc) ? `<small>${esc(schoolName(me.sc))}</small>` : ""}<small>${esc(clsLine(me))}</small></span>`;
   $("#sideUser").classList.toggle("on", view === "profile");
   $("#sideGradesLabel").hidden = $("#sideGrades").hidden = !isStaff();
   $("#sideGrades").innerHTML = isStaff() ? GRADES.map(g => `<button class="chip ${g === grade && view === "shelf" ? "on" : ""}" data-grade="${g}">${g}</button>`).join("") : "";
-  const links = tabs.map(t => t[0] === "offline" && downloaded.size ? [t[0], t[1], t[2] + ": " + downloaded.size] : t).concat([["help", "help", L.help]]);
+  const links = tabs.map(t => t[0] === "offline" && downloaded.size ? [t[0], t[1], t[2] + ": " + downloaded.size] : t);
   $("#sideLinks").innerHTML = links.map(([v, i, t]) => `<button class="${view === v ? "on" : ""}" data-view="${v}">${ico(i)}${esc(t)}</button>`).join("") +
     (me.r === "admin" ? `<button data-cabinet>${ico("shield")}${esc(L.cabinet)}</button>` : "") + `<button data-logout>${ico("out")}${esc(L.logout)}</button>`;
 }
@@ -255,7 +256,6 @@ function renderProfile() {
       ${item("key", L.changePass, `<form id="fPw" class="pform">
         ${fld("p", L.newPass, 'type="password" required minlength="8" autocomplete="new-password"')}${fld("p2", L.password2, 'type="password" required minlength="8" autocomplete="new-password"')}
         <div class="err" id="pwErr"></div><button class="btn-main" type="submit">${esc(L.changePass)}</button></form>`)}
-      ${item("help", L.help, "", 'data-view="help"')}
       ${item("lang", L.lang + ": " + L.langName, "", "disabled")}
       ${me.r === "admin" ? item("shield", L.cabinet, "", "data-cabinet") : ""}
     </div>
