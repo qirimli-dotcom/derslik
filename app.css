@@ -313,3 +313,29 @@ a.btn-ghost{text-decoration:none;color:var(--ink)}
 .asban span{flex:1}
 .asban button{height:34px;padding:0 14px;border-radius:10px;background:#1B2233;color:#fff;font-size:13px;font-weight:600}
 a.btn-ghost{text-decoration:none;color:var(--ink)}
+/* ---- кто в сети (кабинет) */
+.stats4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.stats4>div{background:var(--card);border-radius:14px;padding:10px 12px}
+.stats4 b{display:block;font-family:var(--d);font-size:22px;font-weight:700}
+.stats4 span{font-size:12px;color:var(--muted)}
+.ok{color:#1A8F49}.bad{color:#A1251B}
+.chips2{display:flex;gap:8px;flex-wrap:wrap}
+.chip2{height:36px;padding:0 14px;border-radius:18px;background:var(--card);font-size:14px;color:var(--muted)}
+.chip2.on{background:var(--accent);color:#fff}
+.srow2{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;padding:10px 12px;background:var(--card);border-radius:16px;text-align:left}
+.srow2 .av{position:relative;width:44px;height:44px;border-radius:22px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:var(--d);font-weight:700;font-size:14px}
+.srow2 .dot{position:absolute;right:-1px;bottom:-1px;width:13px;height:13px;border-radius:7px;border:2px solid #fff}
+.dot.g{background:#1FA855}.dot.y{background:#F2A33A}.dot.n{background:#C9D2DF}
+.srow2 .c1{min-width:0}.srow2 .c1 b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srow2 small{display:block;font-size:12px;color:var(--muted)}
+.srow2 .c2{font-size:13px;text-align:right}
+.srow2 .c3{display:none}
+.wk{display:flex;gap:3px}.wk i{width:10px;height:14px;border-radius:3px;background:var(--soft)}.wk i.a{background:var(--accent)}
+.bars14{display:flex;gap:3px;align-items:flex-end;height:36px}.bars14 i{flex:1;height:18%;background:var(--soft);border-radius:3px}.bars14 i.a{height:100%;background:var(--accent)}
+@media (min-width:700px){
+  .srow2{grid-template-columns:44px minmax(0,1.3fr) minmax(0,1fr) auto}
+  .srow2 .c2{text-align:left}
+  .srow2 .c3{display:block}
+}
+@media (max-width:520px){.stats4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.modal-box>*{flex-shrink:0}

@@ -116,11 +116,57 @@ async function logout() {
 
 // ============ КАБИНЕТ ============
 const reqs = () => store.get("reqs", []);
+// ================= КТО В СЕТИ =================
+// visits: {логин: {last, d: {дата: 1}, b, pg, dev}} — хранится в data/visits.json зашифрованным для администраторов
+let VIS = {}, visDirty = false, visSavedAt = 0;
+const today = (t = Date.now()) => new Date(t).toISOString().slice(0, 10);
+async function loadVisits() {
+  try {
+    const f = GH.cfg() && GH.cfg().token ? await GH.readJson("data/visits.json", null) : await K.fetchPublic("data/visits.json", null);
+    if (f && f.k && f.k[me.u]) { const raw = await K.openSealed(f.k[me.u], S.priv), key = await K.importAes(raw, false); VIS = { ...JSON.parse(K.td.decode(await K.aesDec(key, K.ub64(f.c)))), ...VIS }; }
+  } catch (e) { console.warn("visits", e); }
+}
+async function pollBeats() {
+  const cfg = await K.config(); if (!cfg.nt) return;
+  try {
+    const r = await fetch((cfg.nh || K.NTFY) + "/" + cfg.nt + "/json?poll=1&since=12h", { cache: "no-store" });
+    const lines = (await r.text()).split("\n").filter(Boolean);
+    for (const ln of lines) {
+      let m; try { m = JSON.parse(ln); } catch (e) { continue; }
+      if (m.event !== "message" || !m.message) continue;
+      let arr; try { arr = JSON.parse(m.message); } catch (e) { continue; }
+      const mine = (Array.isArray(arr) ? arr : []).find(x => x.a === me.u); if (!mine) continue;
+      let p; try { p = JSON.parse(K.td.decode(await K.openSealed(mine, S.priv))); } catch (e) { continue; }
+      const t = Math.min(p.t || m.time * 1000, m.time * 1000 + 60000), v = VIS[p.u] || (VIS[p.u] = { last: 0, d: {} });
+      if (!v.d[today(t)]) { v.d[today(t)] = 1; visDirty = true; }
+      if (t > v.last) { v.last = t; v.b = p.b || ""; v.pg = p.pg || 0; v.dev = p.d || ""; visDirty = true; }
+    }
+  } catch (e) { console.warn("ntfy", e); }
+  if (admTab === "students" && $("#view [data-stu]") && !$("#uq:focus")) render();
+  if (visDirty && GH.cfg() && GH.cfg().token && Date.now() - visSavedAt > 30 * 60000) saveVisits();
+}
+async function saveVisits() {   // итог сохраняем в репозиторий, чтобы история не терялась через 12 часов
+  try {
+    const cut = today(Date.now() - 60 * 86400000);
+    for (const v of Object.values(VIS)) for (const d of Object.keys(v.d || {})) if (d < cut) delete v.d[d];
+    const raw = K.rnd(32), key = await K.importAes(raw, false), k = {};
+    for (const a of USERS.users.filter(x => x.r === "admin")) k[a.u] = await K.wrapFor(a.pub, raw, 1);
+    const c = K.b64(await K.aesEnc(key, K.te.encode(JSON.stringify(VIS))));
+    visSavedAt = Date.now(); visDirty = false;
+    await GH.commit({ "data/visits.json": json({ v: 1, k, c }) }, "Ziyaretler");
+  } catch (e) { visDirty = true; console.warn("save visits", e); }
+}
+const ago = t => { if (!t) return L.never; const s = (Date.now() - t) / 1000;
+  return s < 720 ? L.nowOnline : s < 3600 ? L.minAgo(Math.round(s / 60)) : s < 86400 ? L.hAgo(Math.round(s / 3600)) : L.dAgo(Math.round(s / 86400)); };
+const stat = u => { const v = VIS[u.u] || {}; const s = v.last ? (Date.now() - v.last) / 1000 : 1e12; return s < 720 ? "g" : s < 86400 * 2 ? "y" : "n"; };
+const weekDots = u => { const v = VIS[u.u] || { d: {} }; let h = ""; for (let i = 6; i >= 0; i--) h += `<i class="${v.d && v.d[today(Date.now() - i * 86400000)] ? "a" : ""}"></i>`; return `<span class="wk">${h}</span>`; };
+const bookOf = v => { const b = v && v.b && CAT.books.find(x => x.id === v.b); return b ? title(b) + (v.pg ? ", s. " + v.pg : "") : ""; };
 function enterCab() {
   $("#auth").hidden = true; $("#cab").hidden = false;
   $("#cabTitle").innerHTML = esc(L.cabinet) + `<small>${esc(fullName(me))} · ${esc(me.u)}</small>`;
   handleReqLink(); render(); syncIssues();
-  clearInterval(enterCab.t); enterCab.t = setInterval(syncIssues, 60000);
+  loadVisits().then(pollBeats).then(render);
+  clearInterval(enterCab.t); enterCab.t = setInterval(() => { syncIssues(); pollBeats(); }, 60000);
 }
 function parseReq(text) {
   const m = String(text).match(/req=([A-Za-z0-9_-]+)/) || String(text).trim().match(/^([A-Za-z0-9_-]{100,})$/);
@@ -352,13 +398,21 @@ function render() {
       : `<p class="empty">${esc(L.noApps)}</p>`);
   } else if (admTab === "students") {
     const classes = [...new Set(USERS.users.filter(u => u.g).map(classOf))].sort((a, b) => parseInt(a) - parseInt(b) || a.localeCompare(b));
-    const f = render.filter || "", fs = render.school || "", q = (render.q || "").toLowerCase();
-    const list = USERS.users.filter(u => (!f || classOf(u) === f) && (!fs || u.sc === fs) && (!q || (fullName(u) + " " + u.u).toLowerCase().includes(q))).sort((a, b) => a.g - b.g || String(a.l).localeCompare(b.l) || String(a.s).localeCompare(b.s));
-    h += `<div class="tools"><label class="search">${ico("search")}<input id="uq" type="search" value="${esc(render.q || "")}" placeholder="${esc(L.name)} / ${esc(L.username)}"></label>
+    const f = render.filter || "", fs = render.school || "", q = (render.q || "").toLowerCase(), act = render.act || "";
+    const studs = USERS.users.filter(u => u.r === "student"), since = t => studs.filter(u => (VIS[u.u] || {}).last > Date.now() - t).length;
+    const statsHtml = `<div class="stats4" data-stu><div><b class="ok">${since(720000)}</b><span>${esc(L.onlineNow)}</span></div><div><b>${studs.filter(u => (VIS[u.u] || {}).d && VIS[u.u].d[today()]).length}</b><span>${esc(L.todayCnt)}</span></div><div><b>${since(7 * 86400000)}</b><span>${esc(L.weekCnt)}</span></div><div><b class="bad">${studs.length - since(7 * 86400000)}</b><span>${esc(L.notWeek)}</span></div></div>
+      <div class="chips2">${[["", L.all], ["on", L.onlineNow], ["off", L.notWeek]].map(([k, t]) => `<button class="chip2 ${act === k ? "on" : ""}" data-act="${k}">${esc(t)}</button>`).join("")}</div>`;
+    const list = USERS.users.filter(u => (!f || classOf(u) === f) && (!fs || u.sc === fs) && (!q || (fullName(u) + " " + u.u).toLowerCase().includes(q))
+      && (!act || (act === "on" ? stat(u) === "g" : u.r === "student" && !((VIS[u.u] || {}).last > Date.now() - 7 * 86400000)))).sort((a, b) => a.g - b.g || String(a.l).localeCompare(b.l) || String(a.s).localeCompare(b.s));
+    h += statsHtml + `<div class="tools"><label class="search">${ico("search")}<input id="uq" type="search" value="${esc(render.q || "")}" placeholder="${esc(L.name)} / ${esc(L.username)}"></label>
       <select id="uf"><option value="">${esc(L.allClasses)}</option>${classes.map(c => `<option ${c === f ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
       ${(SCH.schools || []).length ? `<select id="us"><option value="">${esc(L.allSchools)}</option>${SCH.schools.map(x => `<option value="${esc(x.id)}" ${x.id === fs ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select>` : ""}</div>
       <div class="tools"><button class="sbtn" data-newyear>${ico("clock")} ${esc(L.newYear)}</button><button class="sbtn" data-moveclass>${ico("swap")} ${esc(L.moveClass)}</button><span class="muted" style="font-size:14px">${USERS.users.length}</span></div>
-      <div class="list">${list.map(u => userRow(u, `<button class="ib" data-edituser="${esc(u.u)}" aria-label="${esc(L.change)}">${ico("next")}</button>`)).join("") || `<p class="empty">${esc(L.nothing)}</p>`}</div>`;
+      <div class="list">${list.map(u => { const v = VIS[u.u] || {}, st = stat(u);
+        return `<button class="srow2" data-edituser="${esc(u.u)}"><span class="av">${esc(initials(u))}<i class="dot ${st}"></i></span>
+          <span class="c1"><b>${esc(fullName(u))}${u.r !== "student" ? ` <span class="pill ${u.r}">${esc(L.roles[u.r])}</span>` : ""}</b><small>${esc([u.g ? L.cls(u.g, u.l) : "", schoolName(u.sc)].filter(Boolean).join(" · "))}</small></span>
+          <span class="c2 ${st === "g" ? "ok" : ""}">${esc(ago(v.last))}<small>${esc(st === "g" ? bookOf(v) : "")}</small></span>
+          <span class="c3">${weekDots(u)}</span></button>`; }).join("") || `<p class="empty">${esc(L.nothing)}</p>`}</div>`;
   } else if (admTab === "books") {
     h += `<form class="form" id="fBook"><div class="two">${sel("g", L.gradeLbl, GRADES, render.lastG || 5)}${sel("subject", L.subject, Object.entries(SUBJECTS), "mat")}</div>
       ${fld("t", L.bookTitle, 'maxlength="80"', L.bookTitleHint)}
@@ -375,6 +429,8 @@ function render() {
       <button class="btn-main" type="submit">${esc(L.save)}</button></form>
       <form class="form" id="fGh"><h2 class="ftitle">GitHub</h2>${fld("repo", L.repo, `value="${esc(g.repo || guessRepo())}" autocapitalize="none" required`)}${fld("token", L.token, `value="${esc(g.token || "")}" type="password" autocomplete="off" required`, L.tokenHint)}
       <button class="btn-main" type="submit">${esc(L.save)}</button><button class="btn-ghost" type="button" data-checkgh>${esc(L.check)}</button></form>
+      <div class="form"><h2 class="ftitle">${esc(L.onlineTrack)}</h2><p class="muted" style="margin:0;font-size:14px">${esc(L.onlineTrackHint)}</p>
+        <div id="ntState" class="muted">…</div></div>
       <form class="form" id="fIt"><h2 class="ftitle">${esc(L.apps)}</h2>${fld("it", L.reqToken, 'type="password" autocomplete="off" required', L.reqTokenHint)}
       <button class="btn-main" type="submit">${esc(L.save)}</button></form>
       <p class="muted" style="margin:0;font-size:12px;text-align:center">v${K.VER}</p>
@@ -382,14 +438,24 @@ function render() {
       <button class="btn-main" type="submit">${esc(L.changePass)}</button></form>`;
   }
   $("#view").innerHTML = h;
+  if (admTab === "settings") K.config().then(c => { const el = $("#ntState"); if (el) el.innerHTML = c.nt ? `<b class="ok">${esc(L.on)}</b> <button class="sbtn" data-ntfyoff>${esc(L.turnOff)}</button>` : `<button class="btn-main" data-ntfyon>${esc(L.turnOn)}</button>`; });
   const uq = $("#uq"); if (uq && render.focus) { uq.focus(); uq.setSelectionRange(99, 99); render.focus = false; }
 }
 function modal(html) { $("#modalBox").innerHTML = html; $("#modal").hidden = false; }
 function closeModal() { $("#modal").hidden = true; $("#modalBox").innerHTML = ""; }
+function visitCard(u) {
+  const v = VIS[u.u] || { d: {} }; let bars = "", n7 = 0;
+  for (let i = 13; i >= 0; i--) { const on = v.d && v.d[today(Date.now() - i * 86400000)]; if (on && i < 7) n7++; bars += `<i class="${on ? "a" : ""}"></i>`; }
+  const row = (k, x) => x ? `<div class="prow"><span>${esc(k)}</span><b>${esc(x)}</b></div>` : "";
+  return `<div class="form" style="gap:6px">${row(L.lastVisit, v.last ? ago(v.last) + " · " + new Date(v.last).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : L.never)}
+    ${row(L.reading, bookOf(v))}${row(L.deviceLbl, v.dev)}${row(L.thisWeek, L.daysN(n7))}
+    <span class="muted" style="font-size:13px">${esc(L.last14)}</span><div class="bars14">${bars}</div></div>`;
+}
 function editUser(id) {
   const u = USERS.users.find(x => x.u === id); if (!u) return;
   const self = u.u === me.u;
   modal(`<div class="userline" style="padding:0"><div class="av">${esc(initials(u))}</div><div class="t"><b>${esc(fullName(u))}</b><small>${u.g ? esc(L.cls(u.g, u.l)) + " · " : ""}${esc(u.u)}</small></div></div>
+    ${visitCard(u)}
     <form class="form" id="fUser" data-id="${esc(u.u)}" style="padding:0">
       <div class="two">${fld("n", L.name, `required value="${esc(u.n || "")}"`)}${fld("s", L.surname, `value="${esc(u.s || "")}"`)}</div>
       ${(SCH.schools || []).length ? sel("sc", L.school, [["", "—"]].concat(SCH.schools.map(x => [x.id, x.name])), u.sc || "") : ""}
@@ -442,7 +508,7 @@ document.addEventListener("submit", e => {
   else if (f.id === "fGh") { const g = GH.cfg() || {}; store.set("gh", { ...g, repo: f.repo.value.trim(), token: f.token.value.trim(), branch: "" }); toast(L.saved); render(); }
   else if (f.id === "fPass") changePass(f);
   else if (f.id === "fEditBook") saveBook(f);
-  else if (f.id === "fIt") { const tok = f.it.value.trim(); busy(async () => { const g = GH.cfg(), cfg = { repo: g.repo, it: K.obf(tok) }; if (g.api) cfg.api = g.api;
+  else if (f.id === "fIt") { const tok = f.it.value.trim(); busy(async () => { const g = GH.cfg(), cfg = { ...(await K.config()), repo: g.repo, it: K.obf(tok) }; if (g.api) cfg.api = g.api;
     await K.issuesApi(cfg, "?per_page=1"); await save({ "data/config.json": json(cfg) }, "Arıza tokeni"); }); }
   else if (f.id === "fUser") { closeModal(); const u = USERS.users.find(x => x.u === f.dataset.id); editUserSave(f.dataset.id, +f.g.value, f.l.value, f.r ? f.r.value : u.r, f.sc ? f.sc.value : u.sc, f.n.value.trim(), f.s.value.trim()); }
   else if (f.id === "fMove") { closeModal(); moveClass(f.from.value, f.to.value); }
@@ -457,6 +523,9 @@ document.addEventListener("click", async e => {
   const d = t.dataset;
   if (d.toapp !== undefined) location.href = K.BASE;
   else if (d.logout !== undefined) { if (confirm(L.logout + "?")) logout(); }
+  else if (d.act !== undefined) { render.act = d.act; render(); }
+  else if (d.ntfyon !== undefined) { busy(async () => { const cfg = { ...(await K.config()), nt: "cantam-" + K.b64u(K.rnd(12)).toLowerCase().replace(/[^a-z0-9]/g, "") }; await save({ "data/config.json": json(cfg) }, "Onlayn izlev"); }); }
+  else if (d.ntfyoff !== undefined) { busy(async () => { const cfg = await K.config(); delete cfg.nt; await save({ "data/config.json": json(cfg) }, "Onlayn izlev: söndi"); }); }
   else if (d.adm) { admTab = d.adm; render(); if (d.adm === "apps") syncIssues(); }
   else if (d.approvereq) approve(reqs()[+d.approvereq]);
   else if (d.rejectreq) { const l = reqs(), [r] = l.splice(+d.rejectreq, 1); store.set("reqs", l); render(); closeIssue(r); }

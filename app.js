@@ -350,7 +350,7 @@ async function openBook(id, page) {
     const data = await getBookBytes(b);
     const pdf = await pdfjsLib.getDocument({ data, cMapUrl: "pdfjs/cmaps/", cMapPacked: true, standardFontDataUrl: "pdfjs/standard_fonts/" }).promise;
     if (R.book !== b) return;
-    R.pdf = pdf; R.page = Math.min(page || store.get("page:" + b.id, 1), pdf.numPages);
+    R.pdf = pdf; R.page = Math.min(page || store.get("page:" + b.id, 1), pdf.numPages); setTimeout(() => beat(true), 500);
     $("#rRange").max = pdf.numPages; draw();
   } catch (e) { if (R.book === b) $("#stage").innerHTML = `<p class="placeholder">${esc(L.error)}</p>`; }
 }
@@ -500,12 +500,29 @@ addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => {
 }, 150); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden && S) refresh(); });
 
+// ---------- отметка «в сети» для администратора (зашифрована ключом администратора, через ntfy)
+let beatCfg = null, lastBeat = 0;
+async function beat(force) {
+  if (!S || !me || viewAs() || document.hidden) return;
+  if (!force && Date.now() - lastBeat < 9 * 60000) return;
+  try {
+    if (!beatCfg) beatCfg = await K.config();
+    if (!beatCfg.nt) return;
+    const admins = USERS.users.filter(x => x.r === "admin"); if (!admins.length) return;
+    const rb = R.book, rec = store.get("recent", [])[0];
+    const p = K.te.encode(JSON.stringify({ u: me.u, b: rb ? rb.id : "", pg: rb ? R.page : 0, d: K.device(), t: Date.now() }));
+    const w = []; for (const a of admins) w.push({ a: a.u, ...(await K.wrapFor(a.pub, p, 1)) });
+    lastBeat = Date.now();
+    await fetch((beatCfg.nh || K.NTFY) + "/" + beatCfg.nt, { method: "POST", body: JSON.stringify(w) });
+  } catch (e) {}
+}
+setInterval(() => beat(false), 60000);
 async function refresh() {
   try { await loadData(); } catch (e) { return; }
   if (realMe) { me = realMe; realMe = null; }
   if (!(await syncKeys())) return wipe(L.wiped);
   applyAs();
-  await syncDownloads(); render();
+  await syncDownloads(); render(); beat(true);
 }
 fillStatic();
 (async () => {

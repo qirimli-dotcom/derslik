@@ -76,6 +76,12 @@ K.wrapFor = async (pubB64, rawKey, v) => {
   const k = await ecdhAes(eph.privateKey, ub64(pubB64));
   return { v, e: b64(new Uint8Array(await C.exportKey("raw", eph.publicKey))), c: b64(await aesEnc(k, rawKey)) };
 };
+K.openSealed = async (w, priv) => aesDec(await ecdhAes(priv, ub64(w.e)), ub64(w.c));   // расшифровать то, что зашифровано wrapFor
+K.NTFY = "https://ntfy.sh";
+K.device = () => { const u = navigator.userAgent;
+  const os = /iphone/i.test(u) ? "iPhone" : /ipad/i.test(u) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) ? "iPad" : /android/i.test(u) ? "Android" : /windows/i.test(u) ? "Windows" : /mac/i.test(u) ? "Mac" : "";
+  const br = /crios|chrome/i.test(u) && !/edg/i.test(u) ? "Chrome" : /edg/i.test(u) ? "Edge" : /firefox|fxios/i.test(u) ? "Firefox" : /safari/i.test(u) ? "Safari" : "";
+  return [os, br].filter(Boolean).join(" · "); };
 K.unwrap = async (w, priv, extractable) => importAes(await aesDec(await ecdhAes(priv, ub64(w.e)), ub64(w.c)), extractable);
 K.rawKey = async key => new Uint8Array(await C.exportKey("raw", key));
 
@@ -89,7 +95,7 @@ K.fetchPublic = async (path, dflt) => {
 };
 K.bookUrl = b => K.BASE + b.f + "?v=" + b.kv;
 // книги хранятся частями по 4 МБ: books/gN/id.0.bin, id.1.bin … (GitHub API обрывает долгие запросы)
-K.VER = "22";
+K.VER = "23";
 K.CHUNK = 4 * 1024 * 1024;
 K.partPaths = b => b.n ? Array.from({ length: b.n }, (_, i) => b.f.replace(/\.bin$/, "." + i + ".bin")) : [b.f];
 K.partUrls = b => K.partPaths(b).map(p => K.BASE + p + "?v=" + b.kv);
