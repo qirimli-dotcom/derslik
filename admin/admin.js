@@ -227,6 +227,58 @@ async function moveClass(from, to) {
     toast(L.moved(n));
   });
 }
+// ---------- обложки
+const coverFields = (b = {}) => `<div class="fld"><span>${esc(L.cover)}</span>
+  <div class="coverrow"><div class="cvprev">${K.coverSrc(b) ? `<img src="${esc(K.coverSrc(b))}" alt="">` : ""}</div>
+  <div style="flex:1;display:flex;flex-direction:column;gap:8px"><input name="curl" type="url" placeholder="https://…" autocomplete="off" value="${esc(b.cu || "")}">
+  <input name="cfile" type="file" accept="image/*">${K.coverSrc(b) ? `<label class="chk"><input type="checkbox" name="cdel"> ${esc(L.coverDel)}</label>` : ""}</div></div>
+  <small>${esc(L.coverHint)}</small></div>`;
+async function shrinkImage(blob) {   // уменьшаем до 360px по ширине, JPEG ~40 КБ
+  const url = URL.createObjectURL(blob), img = new Image();
+  try { img.src = url; await img.decode(); } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
+  const w = Math.min(360, img.naturalWidth), h = Math.round(img.naturalHeight * w / img.naturalWidth);
+  const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(img, 0, 0, w, h);
+  const out = await new Promise(r => c.toBlob(r, "image/jpeg", 0.82));
+  return new Uint8Array(await out.arrayBuffer());
+}
+// обложка из формы: файл → в репозиторий; ссылка → пробуем скачать в репозиторий, не вышло — храним ссылку
+async function applyCover(fd, b, files) {
+  const file = fd.get("cfile"), url = String(fd.get("curl") || "").trim();
+  if (fd.get("cdel")) { if (b.c) files[b.c] = null; delete b.c; delete b.cu; delete b.cv; return; }
+  let blob = null;
+  if (file && file.size) blob = file;
+  else if (url && url !== b.cu) { try { const r = await fetch(url, { mode: "cors" }); if (r.ok) blob = await r.blob(); } catch (e) {} if (!blob) { b.cu = url; toast(L.coverLinkOnly); return; } }
+  if (!blob) return;
+  const path = "covers/" + b.id + ".jpg";
+  files[path] = await shrinkImage(blob); b.c = path; b.cv = (b.cv || 0) + 1; delete b.cu;
+}
+function previewCover(input) {
+  const box = input.closest(".coverrow").querySelector(".cvprev");
+  const src = input.type === "file" ? (input.files[0] ? URL.createObjectURL(input.files[0]) : "") : input.value.trim();
+  box.innerHTML = src ? `<img src="${esc(src)}" alt="" onerror="this.remove()">` : "";
+}
+function editBook(id) {
+  const b = CAT.books.find(x => x.id === id); if (!b) return;
+  modal(`<h2>${esc(title(b))}</h2><form class="form" id="fEditBook" data-id="${esc(b.id)}" style="padding:0">
+    ${sel("subject", L.subject, Object.entries(SUBJECTS), b.subject)}
+    ${fld("t", L.bookTitle, `maxlength="80" value="${esc(b.t || "")}"`, L.bookTitleHint)}
+    <div class="two">${fld("part", L.partLbl, `maxlength="10" value="${esc(b.part || "")}"`)}${fld("author", L.author, `maxlength="80" value="${esc(b.author || "")}"`)}</div>
+    ${coverFields(b)}<button class="btn-main" type="submit">${esc(L.save)}</button></form><button class="btn-ghost" data-close>${esc(L.cancel)}</button>`);
+}
+async function saveBook(f) {
+  const fd = new FormData(f), id = f.dataset.id;
+  closeModal();
+  await busy(async () => {
+    await freshData();
+    const b = CAT.books.find(x => x.id === id); if (!b) return;
+    b.subject = fd.get("subject"); b.t = String(fd.get("t") || "").trim(); b.part = String(fd.get("part") || "").trim(); b.author = String(fd.get("author") || "").trim();
+    if (!b.t) delete b.t;
+    const files = {};
+    await applyCover(fd, b, files);
+    files["data/catalog.json"] = json(CAT);
+    await save(files, "Derslik: " + title(b));
+  });
+}
 async function uploadBook(f) {
   const fd = new FormData(f), file = fd.get("file");
   if (!file || !file.size) return;
@@ -236,9 +288,13 @@ async function uploadBook(f) {
     const g = +fd.get("g"), id = Date.now().toString(36) + K.b64u(K.rnd(3));
     const enc = await K.aesEnc(S.keys[g].key, new Uint8Array(await file.arrayBuffer()));
     const b = { id, g, subject: fd.get("subject"), part: String(fd.get("part") || "").trim(), author: String(fd.get("author") || "").trim(), f: "books/g" + g + "/" + id + ".bin", kv: CAT.kv[g] || 1, size: file.size };
+    const t = String(fd.get("t") || "").trim(); if (t) b.t = t;
+    const files = { [b.f]: enc };
+    await applyCover(fd, b, files);
     CAT.books.push(b);
     CAT.books.sort((a, c) => a.g - c.g || a.subject.localeCompare(c.subject) || String(a.part).localeCompare(String(c.part)));
-    await save({ [b.f]: enc, "data/catalog.json": json(CAT) }, "Derslik: " + title(b) + ", " + g);
+    files["data/catalog.json"] = json(CAT);
+    await save(files, "Derslik: " + title(b) + ", " + g);
   });
 }
 async function deleteBook(id) {
@@ -246,7 +302,8 @@ async function deleteBook(id) {
     await freshData();
     const b = CAT.books.find(x => x.id === id); if (!b) return;
     CAT.books = CAT.books.filter(x => x.id !== id);
-    await save({ [b.f]: null, "data/catalog.json": json(CAT) }, "Sil: " + title(b));
+    const files = { [b.f]: null, "data/catalog.json": json(CAT) }; if (b.c) files[b.c] = null;
+    await save(files, "Sil: " + title(b));
   });
 }
 async function changePass(f) {
@@ -291,10 +348,12 @@ function render() {
       <div class="list">${list.map(u => userRow(u, `<button class="ib" data-edituser="${esc(u.u)}" aria-label="${esc(L.change)}">${ico("next")}</button>`)).join("") || `<p class="empty">${esc(L.nothing)}</p>`}</div>`;
   } else if (admTab === "books") {
     h += `<form class="form" id="fBook"><div class="two">${sel("g", L.gradeLbl, GRADES, render.lastG || 5)}${sel("subject", L.subject, Object.entries(SUBJECTS), "mat")}</div>
+      ${fld("t", L.bookTitle, 'maxlength="80"', L.bookTitleHint)}
       <div class="two">${fld("part", L.partLbl, 'maxlength="10" inputmode="numeric"')}${fld("author", L.author, 'maxlength="80"')}</div>
+      ${coverFields()}
       <label class="fld"><span>${esc(L.file)}</span><input name="file" type="file" accept="application/pdf" required></label>
       <button class="btn-main" type="submit">${ico("upload")} ${esc(L.addBook)}</button></form>` +
-      GRADES.map(g => { const bs = CAT.books.filter(b => b.g === g); return bs.length ? `<div class="gh">${esc(L.grade(g))}</div><div class="list">${bs.map(b => `<div class="item"><div class="mini" style="--c:${color(b)}"></div><div class="t">${esc(title(b))}<small>${esc(b.author || "")}${b.size ? " · " + (b.size / 1048576).toFixed(1) + " MB" : ""}</small></div><button class="ib" data-delbook="${esc(b.id)}" aria-label="${esc(L.del)}">${ico("trash")}</button></div>`).join("")}</div>` : ""; }).join("");
+      GRADES.map(g => { const bs = CAT.books.filter(b => b.g === g); return bs.length ? `<div class="gh">${esc(L.grade(g))}</div><div class="list">${bs.map(b => `<div class="item">${K.coverSrc(b) ? `<img class="mini" src="${esc(K.coverSrc(b))}" alt="">` : `<div class="mini" style="--c:${color(b)}"></div>`}<div class="t">${esc(title(b))}<small>${esc([subj(b), b.author, b.size ? (b.size / 1048576).toFixed(1) + " MB" : ""].filter(Boolean).join(" · "))}</small></div><button class="ib" data-editbook="${esc(b.id)}" aria-label="${esc(L.change)}">${ico("gear")}</button><button class="ib" data-delbook="${esc(b.id)}" aria-label="${esc(L.del)}">${ico("trash")}</button></div>`).join("")}</div>` : ""; }).join("");
   } else {
     const g = GH.cfg() || {};
     h += `<form class="form" id="fSchools"><h2 class="ftitle">${esc(L.schools)}</h2>
@@ -367,6 +426,7 @@ document.addEventListener("submit", e => {
   else if (f.id === "fPaste") { const r = parseReq(f.code.value); if (!r) return toast(L.badCode); addReq(r); render(); }
   else if (f.id === "fGh") { const g = GH.cfg() || {}; store.set("gh", { ...g, repo: f.repo.value.trim(), token: f.token.value.trim(), branch: "" }); toast(L.saved); render(); }
   else if (f.id === "fPass") changePass(f);
+  else if (f.id === "fEditBook") saveBook(f);
   else if (f.id === "fIt") { const tok = f.it.value.trim(); busy(async () => { const g = GH.cfg(), cfg = { repo: g.repo, it: K.obf(tok) }; if (g.api) cfg.api = g.api;
     await K.issuesApi(cfg, "?per_page=1"); await save({ "data/config.json": json(cfg) }, "Arıza tokeni"); }); }
   else if (f.id === "fUser") { closeModal(); const u = USERS.users.find(x => x.u === f.dataset.id); editUserSave(f.dataset.id, +f.g.value, f.l.value, f.r ? f.r.value : u.r, f.sc ? f.sc.value : u.sc, f.n.value.trim(), f.s.value.trim()); }
@@ -391,11 +451,13 @@ document.addEventListener("click", async e => {
   else if (d.moveclass !== undefined) moveClassForm();
   else if (d.newyear !== undefined) newYearForm();
   else if (d.delschool) { const inp = document.querySelector(`[data-sid="${d.delschool}"]`); if (inp && confirm(L.confirmDel)) { inp.value = ""; inp.closest(".srow").style.display = "none"; } }
+  else if (d.editbook) editBook(d.editbook);
   else if (d.delbook) { if (confirm(L.confirmDel)) deleteBook(d.delbook); }
   else if (d.checkgh !== undefined) { try { await GH.req(GH.repo()); toast(L.tokenOk); } catch (x) { toast(L.tokenBad); } }
   else if (d.close !== undefined) closeModal();
 });
 document.addEventListener("input", e => { if (e.target.id === "uq") { render.q = e.target.value; render.focus = true; render(); } });
+document.addEventListener("change", e => { if (e.target.name === "curl" || e.target.name === "cfile") previewCover(e.target); });
 document.addEventListener("change", e => { if (e.target.id === "uf") { render.filter = e.target.value; render(); } if (e.target.id === "us") { render.school = e.target.value; render(); } });
 addEventListener("hashchange", () => { if (me) { handleReqLink(); render(); } });
 addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });

@@ -157,16 +157,17 @@ function renderChrome() {
     (me.r === "admin" ? `<button data-cabinet>${ico("shield")}${esc(L.cabinet)}</button>` : "") + `<button data-logout>${ico("out")}${esc(L.logout)}</button>`;
 }
 function coverHtml(b) {
+  const src = K.coverSrc(b);   // фото поверх цветной обложки: если картинка не загрузится, останется цветная
   return `<button class="book" data-open="${esc(b.id)}" aria-label="${esc(title(b) + ", " + L.grade(b.g))}"><div class="cover" style="--c:${color(b)}">
-    <div><b>${esc(subj(b))}</b>${b.part ? `<br><em>${esc(L.part(b.part))}</em>` : ""}</div><span class="g">${b.g}</span>
-    ${downloaded.has(b.id) ? `<span class="ok">${ico("check")}</span>` : ""}</div></button>`;
+    <div><b>${esc(K.name(b))}</b>${b.part ? `<br><em>${esc(L.part(b.part))}</em>` : ""}</div><span class="g">${b.g}</span>
+    ${src ? `<img class="cimg" src="${esc(src)}" alt="" loading="lazy" onerror="this.remove()">` : ""}${downloaded.has(b.id) ? `<span class="ok">${ico("check")}</span>` : ""}</div></button>`;
 }
 function shelvesHtml(list) {
   const W = $("#view").clientWidth - 24, bw = wide.matches ? 124 : 98, gap = wide.matches ? 22 : 14;
   const per = Math.max(2, Math.floor((W + gap) / (bw + gap))); let out = "";
   for (let i = 0; i < list.length; i += per) {
     const row = list.slice(i, i + per);
-    out += `<div class="shelf" style="--bw:${bw}px;--gap:${gap}px"><div class="row">${row.map(coverHtml).join("")}</div><div class="plank"></div><div class="names">${row.map(b => `<span>${esc(b.author || "")}</span>`).join("")}</div></div>`;
+    out += `<div class="shelf" style="--bw:${bw}px;--gap:${gap}px"><div class="row">${row.map(coverHtml).join("")}</div><div class="plank"></div><div class="names">${row.map(b => `<span><b>${esc(K.name(b))}</b><i>${esc([b.part ? L.part(b.part) : "", b.author].filter(Boolean).join(" · "))}</i></span>`).join("")}</div></div>`;
   }
   return out;
 }

@@ -22,7 +22,9 @@ K.COLORS = { mat:"#2848B8", alg:"#1F5FA8", geo:"#3A4BA8", rus:"#B8322B", crh:"#1
   edb:"#A42A5E", etr:"#2F7A1F", bio:"#3F7F22", eng:"#5E36B0", tar:"#9A4515", cog:"#1F7068", fiz:"#0F6F84", kim:"#7E3AA3", inf:"#44607A" };
 K.GRADES = [1,2,3,4,5,6,7,8,9,10,11];
 K.subj = b => SUBJECTS[b.subject] || b.subject;
-K.title = b => K.subj(b) + (b.part ? ", " + L.part(b.part) : "");
+K.name = b => b.t || K.subj(b);                                   // название книги (на крымскотатарском) или предмет
+K.title = b => K.name(b) + (b.part ? ", " + L.part(b.part) : "");
+K.coverSrc = b => b.c ? K.BASE + b.c + "?v=" + (b.cv || 1) : b.cu || "";   // своя копия обложки или внешняя ссылка
 K.color = b => K.COLORS[b.subject] || "#44607A";
 K.fullName = u => [u.n, u.s].filter(Boolean).join(" ");
 K.initials = u => ((u.n || "?")[0] + ((u.s || "")[0] || "")).toUpperCase();
