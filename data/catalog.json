@@ -15,6 +15,19 @@
  },
  "books": [
   {
+   "id": "mukzohdd-fHC",
+   "g": 5,
+   "subject": "bio",
+   "part": "",
+   "author": "V. V. Paseçnik",
+   "f": "books/g5/mukzohdd-fHC.bin",
+   "kv": 2,
+   "size": 21838768,
+   "t": "Биология 5 sinif",
+   "c": "covers/mukzohdd-fHC.jpg",
+   "cv": 1
+  },
+  {
    "id": "mukyllihIZ18",
    "g": 5,
    "subject": "eng",
@@ -25,6 +38,32 @@
    "size": 5578481,
    "t": "Spotlight 5 sinif 2023",
    "c": "covers/mukyllihIZ18.jpg",
+   "cv": 1
+  },
+  {
+   "id": "mul0aujcTU1B",
+   "g": 5,
+   "subject": "mat",
+   "part": "1",
+   "author": "Vilenkin",
+   "f": "books/g5/mul0aujcTU1B.bin",
+   "kv": 2,
+   "size": 12495817,
+   "t": "Математика 5 sinif",
+   "c": "covers/mul0aujcTU1B.jpg",
+   "cv": 1
+  },
+  {
+   "id": "mul0em3zt8ih",
+   "g": 5,
+   "subject": "mat",
+   "part": "2",
+   "author": "Vilenkin",
+   "f": "books/g5/mul0em3zt8ih.bin",
+   "kv": 2,
+   "size": 12549120,
+   "t": "Математика 5 sinif",
+   "c": "covers/mul0em3zt8ih.jpg",
    "cv": 1
   }
  ]
