@@ -28,6 +28,33 @@
    "cv": 1
   },
   {
+   "id": "mul12cin1u0m",
+   "g": 5,
+   "subject": "cog",
+   "part": "",
+   "author": "Alekseev",
+   "f": "books/g5/mul12cin1u0m.bin",
+   "kv": 2,
+   "size": 50651850,
+   "t": "География 5-6 sinif",
+   "n": 13,
+   "c": "covers/mul12cin1u0m.jpg",
+   "cv": 1
+  },
+  {
+   "id": "mul1dbtaMvaM",
+   "g": 5,
+   "subject": "cog",
+   "part": "",
+   "author": "Nikolina",
+   "f": "books/g5/mul1dbtaMvaM.bin",
+   "kv": 2,
+   "size": 3669313,
+   "t": "География атлас 5-6 sinif",
+   "c": "covers/mul1dbtaMvaM.jpg",
+   "cv": 1
+  },
+  {
    "id": "mukyllihIZ18",
    "g": 5,
    "subject": "eng",
@@ -77,6 +104,19 @@
    "size": 16949519,
    "t": "Русский язык 5 sinif",
    "c": "covers/mul0tn5cTCxA.jpg",
+   "cv": 1
+  },
+  {
+   "id": "mul10gickUms",
+   "g": 5,
+   "subject": "rus",
+   "part": "2",
+   "author": "Laduzheskaja",
+   "f": "books/g5/mul10gickUms.bin",
+   "kv": 2,
+   "size": 19543885,
+   "t": "Русский язык 5 sinif",
+   "c": "covers/mul10gickUms.jpg",
    "cv": 1
   }
  ]
