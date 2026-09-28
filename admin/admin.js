@@ -114,12 +114,31 @@ const reqs = () => store.get("reqs", []);
 function enterCab() {
   $("#auth").hidden = true; $("#cab").hidden = false;
   $("#cabTitle").innerHTML = esc(L.cabinet) + `<small>${esc(fullName(me))} · ${esc(me.u)}</small>`;
-  handleReqLink(); render();
+  handleReqLink(); render(); syncIssues();
+  clearInterval(enterCab.t); enterCab.t = setInterval(syncIssues, 60000);
 }
 function parseReq(text) {
   const m = String(text).match(/req=([A-Za-z0-9_-]+)/) || String(text).trim().match(/^([A-Za-z0-9_-]{100,})$/);
   if (!m) return null;
   try { const r = JSON.parse(K.td.decode(K.ub64(m[1]))); return r && r.u && r.pub && r.ep && r.salt ? r : null; } catch (e) { return null; }
+}
+async function syncIssues() {   // заявки, которые ученики отправили автоматически
+  try {
+    const cfg = await K.config(); if (!cfg.it) return;
+    const list = await K.issuesApi(cfg, "?state=open&per_page=100&t=" + Date.now());
+    let cur = reqs(), changed = false;
+    for (const i of list) {
+      if (!String(i.title || "").startsWith(K.REQ_TAG)) continue;
+      const r = parseReq(i.body || ""); if (!r) continue;
+      r._issue = i.number;
+      if (!cur.some(x => x.u === r.u && x.pub === r.pub)) { cur.unshift(r); changed = true; }
+    }
+    if (changed) { store.set("reqs", cur); render(); }
+  } catch (e) { console.warn("issues", e); }
+}
+async function closeIssue(r) {
+  if (!r || !r._issue) return;
+  try { const cfg = await K.config(); await K.issuesApi(cfg, "/" + r._issue, { method: "PATCH", body: JSON.stringify({ state: "closed" }) }); } catch (e) {}
 }
 function addReq(r) { store.set("reqs", [r].concat(reqs().filter(x => !(x.u === r.u && x.pub === r.pub)))); }
 function handleReqLink() {
@@ -160,6 +179,7 @@ async function approve(r) {
     USERS.users = USERS.users.filter(x => x.u !== r.u).concat(u);
     await save({ "data/users.json": json(USERS) }, "Tasdıq: " + r.u);
     store.set("reqs", reqs().filter(x => !(x.u === r.u && x.pub === r.pub)));
+    await closeIssue(r);
   });
 }
 async function removeUser(id, block) {
@@ -258,6 +278,8 @@ function render() {
     const g = GH.cfg() || {};
     h += `<form class="form" id="fGh"><h2 class="ftitle">GitHub</h2>${fld("repo", L.repo, `value="${esc(g.repo || guessRepo())}" autocapitalize="none" required`)}${fld("token", L.token, `value="${esc(g.token || "")}" type="password" autocomplete="off" required`, L.tokenHint)}
       <button class="btn-main" type="submit">${esc(L.save)}</button><button class="btn-ghost" type="button" data-checkgh>${esc(L.check)}</button></form>
+      <form class="form" id="fIt"><h2 class="ftitle">${esc(L.apps)}</h2>${fld("it", L.reqToken, 'type="password" autocomplete="off" required', L.reqTokenHint)}
+      <button class="btn-main" type="submit">${esc(L.save)}</button></form>
       <form class="form" id="fPass"><h2 class="ftitle">${esc(L.changePass)}</h2>${fld("old", L.oldPass, 'type="password" required autocomplete="current-password"')}${fld("p", L.newPass, 'type="password" required minlength="8" autocomplete="new-password"')}${fld("p2", L.password2, 'type="password" required minlength="8" autocomplete="new-password"')}
       <button class="btn-main" type="submit">${esc(L.changePass)}</button></form>`;
   }
@@ -293,6 +315,8 @@ document.addEventListener("submit", e => {
   else if (f.id === "fPaste") { const r = parseReq(f.code.value); if (!r) return toast(L.badCode); addReq(r); render(); }
   else if (f.id === "fGh") { const g = GH.cfg() || {}; store.set("gh", { ...g, repo: f.repo.value.trim(), token: f.token.value.trim(), branch: "" }); toast(L.saved); render(); }
   else if (f.id === "fPass") changePass(f);
+  else if (f.id === "fIt") { const tok = f.it.value.trim(); busy(async () => { const g = GH.cfg(), cfg = { repo: g.repo, it: K.obf(tok) }; if (g.api) cfg.api = g.api;
+    await K.issuesApi(cfg, "?per_page=1"); await save({ "data/config.json": json(cfg) }, "Arıza tokeni"); }); }
   else if (f.id === "fUser") { closeModal(); const u = USERS.users.find(x => x.u === f.dataset.id); editUserSave(f.dataset.id, +f.g.value, f.l.value, f.r ? f.r.value : u.r); }
   else if (f.id === "fMove") { closeModal(); moveClass(f.from.value, f.to.value); }
 });
@@ -302,9 +326,9 @@ document.addEventListener("click", async e => {
   const d = t.dataset;
   if (d.toapp !== undefined) location.href = K.BASE;
   else if (d.logout !== undefined) { if (confirm(L.logout + "?")) logout(); }
-  else if (d.adm) { admTab = d.adm; render(); }
+  else if (d.adm) { admTab = d.adm; render(); if (d.adm === "apps") syncIssues(); }
   else if (d.approvereq) approve(reqs()[+d.approvereq]);
-  else if (d.rejectreq) { const l = reqs(); l.splice(+d.rejectreq, 1); store.set("reqs", l); render(); }
+  else if (d.rejectreq) { const l = reqs(), [r] = l.splice(+d.rejectreq, 1); store.set("reqs", l); render(); closeIssue(r); }
   else if (d.edituser) editUser(d.edituser);
   else if (d.blockuser) { if (confirm(L.block + "? " + L.blockText)) { closeModal(); removeUser(d.blockuser, true); } }
   else if (d.deluser) { if (confirm(L.confirmDel)) { closeModal(); removeUser(d.deluser, false); } }

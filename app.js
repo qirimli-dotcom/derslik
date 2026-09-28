@@ -61,15 +61,30 @@ function showAuth(mode, msg) {
       <p class="alink">${esc(L.noAcc)} <button type="button" data-auth="register">${esc(L.register)}</button></p>`);
 }
 const requestLink = req => K.BASE + "admin/#req=" + K.b64u(K.te.encode(JSON.stringify(req)));
+const reqCode = req => K.b64u(K.te.encode(JSON.stringify(req)));
+async function sendReq(p) {   // автоматическая отправка заявки в кабинет (через GitHub Issues)
+  try {
+    const cfg = await K.config(); if (!cfg.it || !cfg.repo) return false;
+    const r = p.req, who = fullName(r) + ", " + (r.r === "teacher" ? L.roles.teacher : L.cls(r.g, r.l));
+    const iss = await K.issuesApi(cfg, "", { method: "POST", body: JSON.stringify({ title: K.REQ_TAG + " " + r.u + " — " + who, body: "req=" + reqCode(r) }) });
+    p.sent = iss.number; await idb.set("pending", p); return true;
+  } catch (e) { return false; }
+}
 async function showPending() {
   const p = await idb.get("pending"); if (!p) return showAuth("register");
-  const link = requestLink(p.req);
-  let qr = ""; try { const q = qrcode(0, "L"); q.addData(link); q.make(); qr = q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); } catch (e) {}
-  authFrame(`<div class="pending"><div class="ico">${ico("clock")}</div><h2>${esc(L.appReady)}</h2>
-    <p class="muted" style="margin:0">${esc(L.appSend)}</p><div class="qrbox">${qr}</div>
-    <p style="margin:0"><b>${esc(fullName(p.req))}</b><br><span class="muted">${esc(p.req.r === "teacher" ? L.roles.teacher : L.cls(p.req.g, p.req.l))}, ${esc(p.req.u)}</span></p>
-    <button class="btn-main share" data-share>${esc(L.appShare)}</button><button class="btn-ghost" data-copylink>${esc(L.copy)}</button>
-    <p class="muted" style="margin:0;font-size:13px">${esc(L.appAfter)}</p><button class="btn-ghost" data-cancelreq>${esc(L.appCancel)}</button></div>`);
+  if (!p.sent) await sendReq(p);
+  const who = `<p style="margin:0"><b>${esc(fullName(p.req))}</b><br><span class="muted">${esc(p.req.r === "teacher" ? L.roles.teacher : L.cls(p.req.g, p.req.l))}, ${esc(p.req.u)}</span></p>`;
+  if (p.sent) {
+    authFrame(`<div class="pending"><div class="ico">${ico("clock")}</div><h2>${esc(L.appSent)}</h2><p class="muted" style="margin:0">${esc(L.appSentText)}</p>${who}
+      <button class="btn-ghost" data-cancelreq>${esc(L.appCancel)}</button></div>`);
+  } else {
+    const link = requestLink(p.req);
+    let qr = ""; try { const q = qrcode(0, "L"); q.addData(link); q.make(); qr = q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); } catch (e) {}
+    authFrame(`<div class="pending"><div class="ico">${ico("clock")}</div><h2>${esc(L.appReady)}</h2>
+      <p class="muted" style="margin:0">${esc(L.appNotSent)}</p><div class="qrbox">${qr}</div>${who}
+      <button class="btn-ghost" data-copylink>${esc(L.copy)}</button><button class="btn-main" data-resend>${esc(L.refresh)}</button>
+      <button class="btn-ghost" data-cancelreq>${esc(L.appCancel)}</button></div>`);
+  }
   clearInterval(showPending.t); showPending.t = setInterval(checkPending, 30000);
 }
 async function checkPending() {
@@ -333,6 +348,7 @@ document.addEventListener("click", async e => {
   else if (d.share !== undefined) { const p = await idb.get("pending"), url = requestLink(p.req);
     if (navigator.share) navigator.share({ title: L.app, text: L.shareText(fullName(p.req)), url }).catch(() => {}); else navigator.clipboard.writeText(url).then(() => toast(L.copied)); }
   else if (d.copylink !== undefined) { const p = await idb.get("pending"), url = requestLink(p.req); navigator.clipboard.writeText(url).then(() => toast(L.copied), () => prompt(L.copy, url)); }
+  else if (d.resend !== undefined) { await checkPending(); if (await idb.get("pending")) showPending(); }
   else if (d.cancelreq !== undefined) { clearInterval(showPending.t); await idb.del("pending"); showAuth("register"); }
   else if (d.open) openBook(d.open, d.page ? +d.page : 0);
   else if (d.grade) setGrade(+d.grade);
