@@ -507,7 +507,7 @@ async function beat(force) {
   if (!force && Date.now() - lastBeat < 9 * 60000) return;
   try {
     if (!beatCfg) beatCfg = await K.config();
-    if (!beatCfg.nt) return;
+    if (!beatCfg.nt) { beatCfg = null; return; }   // функция ещё не включена — перепроверим через минуту
     const admins = USERS.users.filter(x => x.r === "admin"); if (!admins.length) return;
     const rb = R.book, rec = store.get("recent", [])[0];
     const p = K.te.encode(JSON.stringify({ u: me.u, b: rb ? rb.id : "", pg: rb ? R.page : 0, d: K.device(), t: Date.now() }));

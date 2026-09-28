@@ -41,6 +41,7 @@ window.L = {
   onlineNow: "Şimdi onlayn", todayCnt: "Bugün kirdi", weekCnt: "Bu hafta", notWeek: "7 kün kirmegen", all: "Hepsi",
   nowOnline: "şimdi onlayn", minAgo: n => n + " daqiqa evel", hAgo: n => n + " saat evel", dAgo: n => n + " kün evel", never: "kirmedi",
   lastVisit: "Soñki kiriş", reading: "Oquy", deviceLbl: "Qurulım", thisWeek: "Bu hafta", daysN: n => n + " kün", last14: "Soñki 14 kün",
+  ntErr: "ntfy.sh ile bağlantı yoq", ntGot: n => "Soñki 12 saatte " + n + " belgi alındı",
   onlineTrack: "Onlayn izlev", onlineTrackHint: "Kim onlayn ve soñki kiriş vaqtı. Talebelerniñ belgileri şifrelenip ntfy.sh arqalı keçe.", on: "Qoşulı", turnOn: "Qoş", turnOff: "Sön",
   viewAs: n => n + " kibi körünüş", viewAsBtn: "Talebe kibi kör", viewAsNote: "Bu — talebeniñ körgeni. Onıñ belgileri ve oquv ilerleyişi tek öz telefonında saqlana, bu yerde körünmey.",
   school: "Mektep", pickSchool: "Mektebiñizni saylañız", errSchool: "Mektebiñizni saylañız",

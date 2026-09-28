@@ -130,7 +130,9 @@ async function pollBeats() {
   const cfg = await K.config(); if (!cfg.nt) return;
   try {
     const r = await fetch((cfg.nh || K.NTFY) + "/" + cfg.nt + "/json?poll=1&since=12h", { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
     const lines = (await r.text()).split("\n").filter(Boolean);
+    pollBeats.cnt = lines.filter(l => l.includes('"message"')).length; pollBeats.err = ""; pollBeats.at = Date.now();
     for (const ln of lines) {
       let m; try { m = JSON.parse(ln); } catch (e) { continue; }
       if (m.event !== "message" || !m.message) continue;
@@ -141,7 +143,8 @@ async function pollBeats() {
       if (!v.d[today(t)]) { v.d[today(t)] = 1; visDirty = true; }
       if (t > v.last) { v.last = t; v.b = p.b || ""; v.pg = p.pg || 0; v.dev = p.d || ""; visDirty = true; }
     }
-  } catch (e) { console.warn("ntfy", e); }
+  } catch (e) { console.warn("ntfy", e); pollBeats.err = String(e.message || e); }
+  if (admTab === "settings") showNtState();
   if (admTab === "students" && $("#view [data-stu]") && !$("#uq:focus")) render();
   if (visDirty && GH.cfg() && GH.cfg().token && Date.now() - visSavedAt > 30 * 60000) saveVisits();
 }
@@ -161,6 +164,12 @@ const ago = t => { if (!t) return L.never; const s = (Date.now() - t) / 1000;
 const stat = u => { const v = VIS[u.u] || {}; const s = v.last ? (Date.now() - v.last) / 1000 : 1e12; return s < 720 ? "g" : s < 86400 * 2 ? "y" : "n"; };
 const weekDots = u => { const v = VIS[u.u] || { d: {} }; let h = ""; for (let i = 6; i >= 0; i--) h += `<i class="${v.d && v.d[today(Date.now() - i * 86400000)] ? "a" : ""}"></i>`; return `<span class="wk">${h}</span>`; };
 const bookOf = v => { const b = v && v.b && CAT.books.find(x => x.id === v.b); return b ? title(b) + (v.pg ? ", s. " + v.pg : "") : ""; };
+function showNtState() {   // состояние «Onlayn izlev» + диагностика
+  K.config().then(c => { const el = $("#ntState"); if (!el) return;
+    el.innerHTML = c.nt ? `<b class="ok">${esc(L.on)}</b> <button class="sbtn" data-ntfyoff>${esc(L.turnOff)}</button>
+      <div style="margin-top:8px;font-size:13px">${pollBeats.err ? `<span class="bad">${esc(L.ntErr)}: ${esc(pollBeats.err)}</span>` : pollBeats.at ? esc(L.ntGot(pollBeats.cnt || 0)) : "…"}</div>`
+      : `<button class="btn-main" data-ntfyon>${esc(L.turnOn)}</button>`; });
+}
 function enterCab() {
   $("#auth").hidden = true; $("#cab").hidden = false;
   $("#cabTitle").innerHTML = esc(L.cabinet) + `<small>${esc(fullName(me))} · ${esc(me.u)}</small>`;
@@ -438,7 +447,7 @@ function render() {
       <button class="btn-main" type="submit">${esc(L.changePass)}</button></form>`;
   }
   $("#view").innerHTML = h;
-  if (admTab === "settings") K.config().then(c => { const el = $("#ntState"); if (el) el.innerHTML = c.nt ? `<b class="ok">${esc(L.on)}</b> <button class="sbtn" data-ntfyoff>${esc(L.turnOff)}</button>` : `<button class="btn-main" data-ntfyon>${esc(L.turnOn)}</button>`; });
+  if (admTab === "settings") showNtState();
   const uq = $("#uq"); if (uq && render.focus) { uq.focus(); uq.setSelectionRange(99, 99); render.focus = false; }
 }
 function modal(html) { $("#modalBox").innerHTML = html; $("#modal").hidden = false; }
