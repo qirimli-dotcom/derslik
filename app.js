@@ -5,21 +5,27 @@ const store = K.makeStore("cantam:");
 const wide = matchMedia("(min-width: 900px)");
 const BOOKS_CACHE = "cantam-books";
 
-let USERS = { users: [] }, CAT = { kv: {}, books: [] };
+let USERS = { users: [] }, CAT = { kv: {}, books: [] }, SCH = { schools: [] };
 let me = null, S = null;          // me — запись из users.json, S — сессия {u, pub, priv, keys:{g:{v,key}}}
 let grade = 0, view = "shelf", query = "";
 let downloaded = new Set(store.get("dl", []));
 const isStaff = () => me && (me.r === "admin" || me.r === "teacher");
 const BOOKS = () => CAT.books.filter(b => S && S.keys[b.g]);
 const byId = id => CAT.books.find(b => b.id === id);
+const schoolName = id => { const x = (SCH.schools || []).find(s => s.id === id); return x ? x.name : ""; };
+const clsLine = u => u.r === "student" ? L.cls(u.g, u.l) : L.roles[u.r];
 
 async function loadData() {
-  const [u, c] = await Promise.all([K.fetchPublic("data/users.json", null), K.fetchPublic("data/catalog.json", null)]);
-  if (u) USERS = u; if (c) CAT = c;
-  store.set("cat", CAT);
+  const [u, c, sc] = await Promise.all([K.fetchPublic("data/users.json", null), K.fetchPublic("data/catalog.json", null), K.fetchPublic("data/schools.json", null)]);
+  if (u) USERS = u; if (c) CAT = c; if (sc) SCH = sc;
+  store.set("cat", CAT); store.set("sch", SCH);
 }
 async function syncKeys() {
   const u = USERS.users.find(x => x.u === S.u);
+  if (u && u.pub !== S.pub) {   // одобрена смена пароля — переходим на новый ключ
+    const pw = await idb.get("pwpending").catch(() => null);
+    if (pw && pw.pub === u.pub) { S.pub = u.pub; S.priv = pw.priv; S.keys = {}; await idb.del("pwpending"); K.toast(L.passChanged); }
+  }
   if (!u || u.pub !== S.pub) return false;
   me = u; store.set("me", me);
   let changed = false;
@@ -30,7 +36,7 @@ async function syncKeys() {
 }
 async function wipe(msg) {
   S = null; me = null;
-  try { await idb.del("session"); await idb.del("pending"); } catch (e) {}
+  try { await idb.del("session"); await idb.del("pending"); await idb.del("pwpending"); } catch (e) {}
   try { await caches.delete(BOOKS_CACHE); } catch (e) {}
   store.clear(); downloaded = new Set(); CAT = { kv: {}, books: [] };
   closeReaderSilently(); closeMenu();
@@ -46,6 +52,7 @@ function authFrame(body) {
 function showAuth(mode, msg) {
   authFrame(mode === "register" ? `<form class="form" id="fReg" autocomplete="off">
       <h2 class="ftitle">${esc(L.register)}</h2>
+      ${(SCH.schools || []).length ? sel("sc", L.school, [["", L.pickSchool]].concat(SCH.schools.map(x => [x.id, x.name])), "") : ""}
       <div class="two">${fld("n", L.name, 'required maxlength="40"')}${fld("s", L.surname, 'required maxlength="60"')}</div>
       <div class="two">${sel("g", L.gradeLbl, GRADES, 5)}${sel("l", L.letter, LETTERS, "A")}</div>
       ${sel("r", L.iAm, [["student", L.roles.student], ["teacher", L.roles.teacher]], "student")}
@@ -62,18 +69,18 @@ function showAuth(mode, msg) {
 }
 const requestLink = req => K.BASE + "admin/#req=" + K.b64u(K.te.encode(JSON.stringify(req)));
 const reqCode = req => K.b64u(K.te.encode(JSON.stringify(req)));
-async function sendReq(p) {   // автоматическая отправка заявки в кабинет (через GitHub Issues)
+async function sendReq(p, noStore) {   // автоматическая отправка заявки в кабинет (через GitHub Issues)
   try {
     const cfg = await K.config(); if (!cfg.it || !cfg.repo) return false;
-    const r = p.req, who = fullName(r) + ", " + (r.r === "teacher" ? L.roles.teacher : L.cls(r.g, r.l));
+    const r = p.req, who = [fullName(r), r.r === "teacher" ? L.roles.teacher : L.cls(r.g, r.l), schoolName(r.sc)].filter(Boolean).join(", ");
     const iss = await K.issuesApi(cfg, "", { method: "POST", body: JSON.stringify({ title: K.REQ_TAG + " " + r.u + " — " + who, body: "req=" + reqCode(r) }) });
-    p.sent = iss.number; await idb.set("pending", p); return true;
+    p.sent = iss.number; if (!noStore) await idb.set("pending", p); return true;
   } catch (e) { return false; }
 }
 async function showPending() {
   const p = await idb.get("pending"); if (!p) return showAuth("register");
   if (!p.sent) await sendReq(p);
-  const who = `<p style="margin:0"><b>${esc(fullName(p.req))}</b><br><span class="muted">${esc(p.req.r === "teacher" ? L.roles.teacher : L.cls(p.req.g, p.req.l))}, ${esc(p.req.u)}</span></p>`;
+  const who = `<p style="margin:0"><b>${esc(fullName(p.req))}</b><br><span class="muted">${esc([schoolName(p.req.sc), p.req.r === "teacher" ? L.roles.teacher : L.cls(p.req.g, p.req.l), p.req.u].filter(Boolean).join(", "))}</span></p>`;
   if (p.sent) {
     authFrame(`<div class="pending"><div class="ico">${ico("clock")}</div><h2>${esc(L.appSent)}</h2><p class="muted" style="margin:0">${esc(L.appSentText)}</p>${who}
       <button class="btn-ghost" data-cancelreq>${esc(L.appCancel)}</button></div>`);
@@ -100,11 +107,11 @@ async function checkPending() {
 async function doRegister(f) {
   const d = Object.fromEntries(new FormData(f).entries()), err = $("#aErr"), btn = f.querySelector("button[type=submit]");
   d.u = d.u.trim().toLowerCase();
-  const bad = K.checkNewUser(d); if (bad) return err.textContent = bad;
+  const bad = K.checkNewUser(d) || ((SCH.schools || []).length && !d.sc ? L.errSchool : ""); if (bad) return err.textContent = bad;
   btn.disabled = true;
   try {
     const id = await K.makeIdentity(d.p);
-    const req = { v: 1, u: d.u, n: d.n.trim(), s: d.s.trim(), g: d.r === "teacher" ? 0 : +d.g, l: d.r === "teacher" ? "" : d.l, r: d.r, salt: id.salt, pub: id.pub, ep: id.ep, t: Date.now() };
+    const req = { v: 1, u: d.u, n: d.n.trim(), s: d.s.trim(), g: d.r === "teacher" ? 0 : +d.g, l: d.r === "teacher" ? "" : d.l, r: d.r, sc: d.sc || "", salt: id.salt, pub: id.pub, ep: id.ep, t: Date.now() };
     await idb.set("pending", { req, priv: id.priv });
     showPending();
   } catch (e) { err.textContent = String(e.message || e); btn.disabled = false; }
@@ -139,7 +146,7 @@ function fillStatic() {
 }
 function renderChrome() {
   if (!me) return;
-  const tabs = [["shelf", "shelf", L.tabShelf], ["offline", "down", L.tabOffline], ["marks", "mark", L.tabMarks]];
+  const tabs = [["shelf", "shelf", L.tabShelf], ["offline", "down", L.tabOffline], ["marks", "mark", L.tabMarks], ["profile", "user", L.profile]];
   $("#tabs").innerHTML = tabs.map(([v, i, t]) => `<button class="tab ${view === v ? "on" : ""}" data-view="${v}">${ico(i)}${esc(t)}</button>`).join("");
   $("#sideGradesLabel").hidden = $("#sideGrades").hidden = !isStaff();
   $("#sideGrades").innerHTML = isStaff() ? GRADES.map(g => `<button class="chip ${g === grade && view === "shelf" ? "on" : ""}" data-grade="${g}">${g}</button>`).join("") : "";
@@ -177,10 +184,11 @@ function installHtml() {
 }
 const searchHtml = () => `<label class="search">${ico("search")}<input id="q" type="search" value="${esc(query)}" placeholder="${esc(L.search)}" aria-label="${esc(L.search)}" autocomplete="off"></label>`;
 function renderShelf() {
+  if (!isStaff()) grade = me.g;   // ученик всегда видит свой текущий класс (после перевода — новый)
   const q = query.trim().toLowerCase(), all = BOOKS();
   const list = all.filter(b => q ? (title(b) + " " + (b.author || "") + " " + b.g).toLowerCase().includes(q) : b.g === grade);
   const count = all.filter(b => b.g === grade).length;
-  const clsName = isStaff() ? L.grade(grade) : L.cls(me.g, me.l);
+  const clsName = (isStaff() ? L.grade(grade) : L.cls(me.g, me.l)) + (schoolName(me.sc) ? " · " + schoolName(me.sc) : "");
   const head = wide.matches ? `<div class="hello"><div><h1>${esc(clsName)}</h1><p>${esc(L.books(count))}</p></div>${searchHtml()}</div>`
     : `<div class="hello"><div><h1>${esc(L.hello + ", " + (me.n || "") + "!")}</h1><p>${esc(clsName + ", " + L.books(count))}</p></div>${searchHtml()}</div>`;
   const chips = isStaff() ? `<div class="chips">${GRADES.map(g => `<button class="chip ${g === grade ? "on" : ""}" data-grade="${g}">${g === grade ? esc(L.grade(g)) : g}</button>`).join("")}</div>` : "";
@@ -199,10 +207,35 @@ function renderMarks() {
 function renderHelp() {
   $("#view").innerHTML = `<h1>${esc(L.help)}</h1><div class="list">${L.helpText.map(t => `<div class="item"><div class="t">${esc(t)}</div></div>`).join("")}</div>${installHtml()}<p class="muted">${esc(L.app)} — ${esc(L.slogan)}</p>`;
 }
+function renderProfile() {
+  const row = (k, v) => v ? `<div class="prow"><span>${esc(k)}</span><b>${esc(v)}</b></div>` : "";
+  const mine = BOOKS().filter(b => me.r !== "student" || b.g === me.g).length;
+  $("#view").innerHTML = `<h1>${esc(L.profile)}</h1>
+    <div class="pcard"><div class="av big">${esc(initials(me))}</div><div><h2>${esc(fullName(me))}</h2><p class="muted" style="margin:4px 0 0">${esc(L.roles[me.r])}</p></div></div>
+    <div class="form">${row(L.school, schoolName(me.sc))}${me.r === "student" ? row(L.gradeLbl, L.cls(me.g, me.l)) : ""}${row(L.username, me.u)}${row(L.booksAdm, String(mine))}${row(L.tabOffline, String(downloaded.size))}</div>
+    <p class="muted" style="margin:0;font-size:14px">${esc(L.profileHint)}</p>
+    <form class="form" id="fPw"><h2 class="ftitle">${esc(L.changePass)}</h2>
+      ${fld("p", L.newPass, 'type="password" required minlength="8" autocomplete="new-password"')}${fld("p2", L.password2, 'type="password" required minlength="8" autocomplete="new-password"')}
+      <div class="err" id="pwErr"></div><button class="btn-main" type="submit">${esc(L.changePass)}</button></form>
+    <button class="btn-ghost" data-logout>${ico("out")} ${esc(L.logout)}</button>`;
+}
+async function changePassword(f) {
+  const err = $("#pwErr"), d = { u: me.u, p: f.p.value, p2: f.p2.value }, bad = K.checkNewUser(d);
+  if (bad) return err.textContent = bad;
+  const btn = f.querySelector("button"); btn.disabled = true;
+  try {
+    const id = await K.makeIdentity(d.p);
+    const p = { req: { v: 1, u: me.u, n: me.n, s: me.s, g: me.g, l: me.l, r: me.r, sc: me.sc || "", pw: 1, salt: id.salt, pub: id.pub, ep: id.ep, t: Date.now() }, priv: id.priv };
+    if (!(await sendReq(p, true))) throw 0;
+    await idb.set("pwpending", { pub: id.pub, priv: id.priv });
+    f.reset(); err.textContent = ""; toast(L.passSent);
+  } catch (e) { err.textContent = L.errNet; }
+  btn.disabled = false;
+}
 function render() {
   if (!me) return;
   renderChrome();
-  ({ shelf: renderShelf, offline: renderOffline, marks: renderMarks, help: renderHelp }[view] || renderShelf)();
+  ({ shelf: renderShelf, offline: renderOffline, marks: renderMarks, help: renderHelp, profile: renderProfile }[view] || renderShelf)();
 }
 function go(v) { view = v; query = ""; render(); window.scrollTo(0, 0); $(".main").scrollTop = 0; }
 function setGrade(g) { grade = g; store.set("grade", g); go("shelf"); }
@@ -210,7 +243,7 @@ function setGrade(g) { grade = g; store.set("grade", g); go("shelf"); }
 function openMenu() {
   const rec = store.get("recent", [])[0], rb = rec && byId(rec.id);
   const row = (act, i, t, sub, on) => `<button class="mrow ${on ? "on" : ""}" ${act}><span class="ic">${ico(i)}</span><span class="t">${esc(t)}${sub ? `<small>${esc(sub)}</small>` : ""}</span>${ico("next")}</button>`;
-  $("#menuBody").innerHTML = `<div class="userline"><div class="av">${esc(initials(me))}</div><div class="t"><b>${esc(fullName(me))}</b><small>${esc(L.roles[me.r])}${me.g ? ", " + esc(L.cls(me.g, me.l)) : ""} · ${esc(me.u)}</small></div></div>` +
+  $("#menuBody").innerHTML = `<button class="userline" data-mview="profile" style="width:100%;text-align:left"><div class="av">${esc(initials(me))}</div><div class="t"><b>${esc(fullName(me))}</b><small>${esc([schoolName(me.sc), clsLine(me), me.u].filter(Boolean).join(" · "))}</small></div>${ico("next")}</button>` +
     row('data-mview="shelf"', "shelf", L.tabShelf, "", view === "shelf") +
     (rb && S.keys[rb.g] ? row(`data-mopen="${esc(rb.id)}"`, "book", L.cont, title(rb) + ", " + L.page + " " + rec.page) : "") +
     row('data-mview="offline"', "down", L.tabOffline, "", view === "offline") + row('data-mview="marks"', "mark", L.tabMarks, "", view === "marks") +
@@ -337,12 +370,12 @@ async function syncDownloads() {
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredPrompt = e; render(); });
 document.addEventListener("submit", e => {
   const f = e.target; e.preventDefault();
-  if (f.id === "fLogin") doLogin(f); else if (f.id === "fReg") doRegister(f);
+  if (f.id === "fLogin") doLogin(f); else if (f.id === "fReg") doRegister(f); else if (f.id === "fPw") changePassword(f);
 });
 document.addEventListener("click", async e => {
   const t = e.target.closest("button,[data-open]"); if (!t) return;
   const d = t.dataset;
-  if (d.auth) showAuth(d.auth);
+  if (d.auth) { if (d.auth === "register") await loadData().catch(() => {}); showAuth(d.auth); }
   else if (d.logout !== undefined) { if (confirm(L.logout + "?")) wipe(); }
   else if (d.cabinet !== undefined) location.href = K.BASE + "admin/";
   else if (d.share !== undefined) { const p = await idb.get("pending"), url = requestLink(p.req);
@@ -390,7 +423,7 @@ fillStatic();
 (async () => {
   try { S = await idb.get("session"); } catch (e) { S = null; }
   if (S) {
-    me = store.get("me", null); CAT = store.get("cat", CAT);
+    me = store.get("me", null); CAT = store.get("cat", CAT); SCH = store.get("sch", SCH);
     if (me) enterApp();
     await refresh();
     if (!me && S) wipe();

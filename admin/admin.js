@@ -2,7 +2,8 @@
 "use strict";
 const { $, esc, ico, idb, GRADES, subj, title, color, fullName, initials, toast, fld, sel, U_ATTR, json } = K;
 const store = K.makeStore("cantam-adm:");
-let USERS = { v: 1, users: [] }, CAT = { v: 1, kv: {}, books: [] };
+let USERS = { v: 1, users: [] }, CAT = { v: 1, kv: {}, books: [] }, SCH = { v: 1, schools: [] };
+const schoolName = id => { const x = (SCH.schools || []).find(s => s.id === id); return x ? x.name : ""; };
 let me = null, S = null, admTab = "apps";
 
 // ============ GitHub API ============
@@ -34,8 +35,8 @@ const GH = {
 };
 const guessRepo = () => { const h = location.hostname, seg = location.pathname.split("/").filter(Boolean)[0] || ""; return h.endsWith(".github.io") ? h.split(".")[0] + "/" + seg : ""; };
 async function freshData() {
-  if (GH.cfg() && GH.cfg().token) { USERS = await GH.readJson("data/users.json", USERS); CAT = await GH.readJson("data/catalog.json", CAT); }
-  else { USERS = await K.fetchPublic("data/users.json", USERS); CAT = await K.fetchPublic("data/catalog.json", CAT); }
+  if (GH.cfg() && GH.cfg().token) { USERS = await GH.readJson("data/users.json", USERS); CAT = await GH.readJson("data/catalog.json", CAT); SCH = await GH.readJson("data/schools.json", SCH); }
+  else { USERS = await K.fetchPublic("data/users.json", USERS); CAT = await K.fetchPublic("data/catalog.json", CAT); SCH = await K.fetchPublic("data/schools.json", SCH); }
 }
 
 // ============ ВХОД ============
@@ -173,8 +174,9 @@ async function approve(r) {
     await freshData();
     const old = USERS.users.find(x => x.u === r.u);
     if (old && old.pub !== r.pub && !confirm(L.replaceUser)) return;
-    const role = old && old.r === "admin" ? "admin" : r.r === "teacher" ? "teacher" : "student";
-    const u = { u: r.u, n: r.n, s: r.s, g: +r.g || 0, l: r.l || "", r: role, salt: r.salt, pub: r.pub, ep: r.ep, a: Date.now() };
+    const role = old && (old.r === "admin" || r.pw) ? old.r : r.r === "teacher" ? "teacher" : "student";
+    const base = r.pw && old ? old : r;   // смена пароля: данные ученика прежние, меняется только ключ
+    const u = { u: r.u, n: base.n, s: base.s, g: +base.g || 0, l: base.l || "", sc: base.sc || "", r: role, salt: r.salt, pub: r.pub, ep: r.ep, a: Date.now() };
     u.k = await keysFor(u);
     USERS.users = USERS.users.filter(x => x.u !== r.u).concat(u);
     await save({ "data/users.json": json(USERS) }, "Tasdıq: " + r.u);
@@ -193,11 +195,11 @@ async function removeUser(id, block) {
     await save(files, (block ? "Blok: " : "Sil: ") + id);
   });
 }
-async function editUserSave(id, g, l, r) {
+async function editUserSave(id, g, l, r, sc) {
   await busy(async () => {
     await freshData();
     const u = USERS.users.find(x => x.u === id); if (!u) return;
-    u.g = g; u.l = l; u.r = r; u.k = await keysFor(u);
+    u.g = g; u.l = l; u.r = r; u.sc = sc || ""; u.k = await keysFor(u);
     await save({ "data/users.json": json(USERS) }, "Deñişiklik: " + id);
   });
 }
@@ -248,7 +250,8 @@ async function changePass(f) {
 const classOf = u => u.g + "-" + u.l;
 function userRow(u, acts, cls) {
   const pill = u.r !== "student" ? `<span class="pill ${u.r}">${esc(L.roles[u.r])}</span>` : "";
-  return `<div class="arow ${cls || ""}"><div class="av">${esc(initials(u))}</div><div class="t"><b>${esc(fullName(u))}${pill}</b><small>${u.g ? esc(L.cls(u.g, u.l)) + " · " : ""}${esc(u.u)}</small></div><div class="acts">${acts}</div></div>`;
+  const line = [schoolName(u.sc), u.g ? L.cls(u.g, u.l) : "", u.u].filter(Boolean).join(" · ");
+  return `<div class="arow ${cls || ""}"><div class="av">${esc(initials(u))}</div><div class="t"><b>${esc(fullName(u))}${pill}</b><small>${esc(line)}</small></div><div class="acts">${acts}</div></div>`;
 }
 function render() {
   if (!me) return;
@@ -258,15 +261,16 @@ function render() {
   if (admTab === "apps") {
     h += `<form class="form" id="fPaste"><label class="fld"><span>${esc(L.pasteCode)}</span><input name="code" autocomplete="off" autocapitalize="none"></label><button class="btn-ghost" type="submit">${esc(L.addApp)}</button></form>` +
       (n ? `<div class="list">${reqs().map((r, i) => { const ex = USERS.users.some(x => x.u === r.u);
-        return userRow({ n: r.n, s: r.s, g: r.g, l: r.l, u: r.u + (ex ? " ⚠" : ""), r: r.r === "teacher" ? "teacher" : "student" }, `<button class="sbtn no" data-rejectreq="${i}">${esc(L.reject)}</button><button class="sbtn ok" data-approvereq="${i}">${esc(L.approve)}</button>`, "stack"); }).join("")}</div>`
+        return userRow({ n: r.n, s: r.s, g: r.g, l: r.l, sc: r.sc, u: r.u + (r.pw ? " · " + L.pwReq : ex ? " ⚠" : ""), r: r.r === "teacher" ? "teacher" : "student" }, `<button class="sbtn no" data-rejectreq="${i}">${esc(L.reject)}</button><button class="sbtn ok" data-approvereq="${i}">${esc(L.approve)}</button>`, "stack"); }).join("")}</div>`
       : `<p class="empty">${esc(L.noApps)}</p>`);
   } else if (admTab === "students") {
     const classes = [...new Set(USERS.users.filter(u => u.g).map(classOf))].sort((a, b) => parseInt(a) - parseInt(b) || a.localeCompare(b));
-    const f = render.filter || "", q = (render.q || "").toLowerCase();
-    const list = USERS.users.filter(u => (!f || classOf(u) === f) && (!q || (fullName(u) + " " + u.u).toLowerCase().includes(q))).sort((a, b) => a.g - b.g || String(a.l).localeCompare(b.l) || String(a.s).localeCompare(b.s));
+    const f = render.filter || "", fs = render.school || "", q = (render.q || "").toLowerCase();
+    const list = USERS.users.filter(u => (!f || classOf(u) === f) && (!fs || u.sc === fs) && (!q || (fullName(u) + " " + u.u).toLowerCase().includes(q))).sort((a, b) => a.g - b.g || String(a.l).localeCompare(b.l) || String(a.s).localeCompare(b.s));
     h += `<div class="tools"><label class="search">${ico("search")}<input id="uq" type="search" value="${esc(render.q || "")}" placeholder="${esc(L.name)} / ${esc(L.username)}"></label>
-      <select id="uf"><option value="">${esc(L.allClasses)}</option>${classes.map(c => `<option ${c === f ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></div>
-      <div class="tools"><button class="sbtn" data-moveclass>${ico("swap")} ${esc(L.moveClass)}</button><span class="muted" style="font-size:14px">${USERS.users.length}</span></div>
+      <select id="uf"><option value="">${esc(L.allClasses)}</option>${classes.map(c => `<option ${c === f ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
+      ${(SCH.schools || []).length ? `<select id="us"><option value="">${esc(L.allSchools)}</option>${SCH.schools.map(x => `<option value="${esc(x.id)}" ${x.id === fs ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select>` : ""}</div>
+      <div class="tools"><button class="sbtn" data-newyear>${ico("clock")} ${esc(L.newYear)}</button><button class="sbtn" data-moveclass>${ico("swap")} ${esc(L.moveClass)}</button><span class="muted" style="font-size:14px">${USERS.users.length}</span></div>
       <div class="list">${list.map(u => userRow(u, `<button class="ib" data-edituser="${esc(u.u)}" aria-label="${esc(L.change)}">${ico("next")}</button>`)).join("") || `<p class="empty">${esc(L.nothing)}</p>`}</div>`;
   } else if (admTab === "books") {
     h += `<form class="form" id="fBook"><div class="two">${sel("g", L.gradeLbl, GRADES, render.lastG || 5)}${sel("subject", L.subject, Object.entries(SUBJECTS), "mat")}</div>
@@ -276,7 +280,11 @@ function render() {
       GRADES.map(g => { const bs = CAT.books.filter(b => b.g === g); return bs.length ? `<div class="gh">${esc(L.grade(g))}</div><div class="list">${bs.map(b => `<div class="item"><div class="mini" style="--c:${color(b)}"></div><div class="t">${esc(title(b))}<small>${esc(b.author || "")}${b.size ? " · " + (b.size / 1048576).toFixed(1) + " MB" : ""}</small></div><button class="ib" data-delbook="${esc(b.id)}" aria-label="${esc(L.del)}">${ico("trash")}</button></div>`).join("")}</div>` : ""; }).join("");
   } else {
     const g = GH.cfg() || {};
-    h += `<form class="form" id="fGh"><h2 class="ftitle">GitHub</h2>${fld("repo", L.repo, `value="${esc(g.repo || guessRepo())}" autocapitalize="none" required`)}${fld("token", L.token, `value="${esc(g.token || "")}" type="password" autocomplete="off" required`, L.tokenHint)}
+    h += `<form class="form" id="fSchools"><h2 class="ftitle">${esc(L.schools)}</h2>
+      ${(SCH.schools || []).map(x => `<div class="srow"><input data-sid="${esc(x.id)}" value="${esc(x.name)}" aria-label="${esc(L.schoolNameLbl)}"><button type="button" class="ib" data-delschool="${esc(x.id)}" aria-label="${esc(L.del)}">${ico("trash")}</button></div>`).join("")}
+      ${fld("add", L.addSchool, `placeholder="${esc(L.schoolNameLbl)}"`)}
+      <button class="btn-main" type="submit">${esc(L.save)}</button></form>
+      <form class="form" id="fGh"><h2 class="ftitle">GitHub</h2>${fld("repo", L.repo, `value="${esc(g.repo || guessRepo())}" autocapitalize="none" required`)}${fld("token", L.token, `value="${esc(g.token || "")}" type="password" autocomplete="off" required`, L.tokenHint)}
       <button class="btn-main" type="submit">${esc(L.save)}</button><button class="btn-ghost" type="button" data-checkgh>${esc(L.check)}</button></form>
       <form class="form" id="fIt"><h2 class="ftitle">${esc(L.apps)}</h2>${fld("it", L.reqToken, 'type="password" autocomplete="off" required', L.reqTokenHint)}
       <button class="btn-main" type="submit">${esc(L.save)}</button></form>
@@ -293,12 +301,38 @@ function editUser(id) {
   const self = u.u === me.u;
   modal(`<div class="userline" style="padding:0"><div class="av">${esc(initials(u))}</div><div class="t"><b>${esc(fullName(u))}</b><small>${u.g ? esc(L.cls(u.g, u.l)) + " · " : ""}${esc(u.u)}</small></div></div>
     <form class="form" id="fUser" data-id="${esc(u.u)}" style="padding:0">
+      ${(SCH.schools || []).length ? sel("sc", L.school, [["", "—"]].concat(SCH.schools.map(x => [x.id, x.name])), u.sc || "") : ""}
       <div class="two">${sel("g", L.gradeLbl, [[0, "—"]].concat(GRADES.map(g => [g, g])), u.g)}${sel("l", L.letter, [["", "—"]].concat(LETTERS.map(l => [l, l])), u.l)}</div>
       ${self ? "" : sel("r", L.role, Object.entries(L.roles), u.r)}
       <button class="btn-main" type="submit">${esc(L.save)}</button></form>
     ${self ? "" : `<button class="btn-ghost" data-blockuser="${esc(u.u)}" style="color:#A1251B">${ico("lock")} ${esc(L.block)}</button><p class="muted" style="margin:-6px 0 0;font-size:12px;text-align:center">${esc(L.blockText)}</p>
     <button class="btn-ghost" data-deluser="${esc(u.u)}">${ico("trash")} ${esc(L.del)}</button>`}
     <button class="btn-ghost" data-close>${esc(L.close)}</button>`);
+}
+function newYearForm() {
+  const opts = [["", L.allSchools]].concat((SCH.schools || []).map(x => [x.id, x.name]));
+  const count = sc => { const st = USERS.users.filter(u => u.r === "student" && u.g && (!sc || u.sc === sc)); return [st.filter(u => u.g < 11).length, st.filter(u => u.g === 11).length]; };
+  const [n, m] = count("");
+  modal(`<h2>${esc(L.newYear)}</h2><form class="form" id="fYear" style="padding:0">${(SCH.schools || []).length ? sel("sc", L.school, opts, "") : ""}
+    <p class="muted" style="margin:0" id="yText">${esc(L.newYearText(n, m))}</p>
+    <label class="chk"><input type="checkbox" name="del" checked> ${esc(L.delGrads)}</label>
+    <button class="btn-main" type="submit">${esc(L.newYear)}</button></form><button class="btn-ghost" data-close>${esc(L.cancel)}</button>`);
+  const s = $("#fYear [name=sc]"); if (s) s.onchange = () => { const [a, b] = count(s.value); $("#yText").textContent = L.newYearText(a, b); };
+}
+async function newYear(sc, delGrads) {
+  let n = 0, m = 0;
+  await busy(async () => {
+    await freshData();
+    const out = [];
+    for (const u of USERS.users) {
+      if (u.r !== "student" || !u.g || (sc && u.sc !== sc)) { out.push(u); continue; }
+      if (u.g >= 11) { m++; if (delGrads) continue; u.g = 0; u.l = ""; u.k = {}; out.push(u); continue; }
+      u.g += 1; u.k = await keysFor(u); n++; out.push(u);
+    }
+    USERS.users = out;
+    await save({ "data/users.json": json(USERS) }, L.newYear + (sc ? ": " + schoolName(sc) : ""));
+    toast(L.newYearDone(n, m));
+  });
 }
 function moveClassForm() {
   const classes = [...new Set(USERS.users.filter(u => u.r === "student").map(classOf))];
@@ -317,8 +351,12 @@ document.addEventListener("submit", e => {
   else if (f.id === "fPass") changePass(f);
   else if (f.id === "fIt") { const tok = f.it.value.trim(); busy(async () => { const g = GH.cfg(), cfg = { repo: g.repo, it: K.obf(tok) }; if (g.api) cfg.api = g.api;
     await K.issuesApi(cfg, "?per_page=1"); await save({ "data/config.json": json(cfg) }, "Arıza tokeni"); }); }
-  else if (f.id === "fUser") { closeModal(); const u = USERS.users.find(x => x.u === f.dataset.id); editUserSave(f.dataset.id, +f.g.value, f.l.value, f.r ? f.r.value : u.r); }
+  else if (f.id === "fUser") { closeModal(); const u = USERS.users.find(x => x.u === f.dataset.id); editUserSave(f.dataset.id, +f.g.value, f.l.value, f.r ? f.r.value : u.r, f.sc ? f.sc.value : u.sc); }
   else if (f.id === "fMove") { closeModal(); moveClass(f.from.value, f.to.value); }
+  else if (f.id === "fYear") { const sc = f.sc ? f.sc.value : "", del = f.del.checked; closeModal(); newYear(sc, del); }
+  else if (f.id === "fSchools") { const names = [...f.querySelectorAll("[data-sid]")].map(i => ({ id: i.dataset.sid, name: i.value.trim() })).filter(x => x.name);
+    const add = f.add.value.trim(); if (add) names.push({ id: "s" + Date.now().toString(36), name: add });
+    busy(async () => { SCH = { v: 1, schools: names }; await save({ "data/schools.json": json(SCH) }, L.schools); }); }
 });
 document.addEventListener("click", async e => {
   if (e.target.id === "modal") return closeModal();
@@ -333,12 +371,14 @@ document.addEventListener("click", async e => {
   else if (d.blockuser) { if (confirm(L.block + "? " + L.blockText)) { closeModal(); removeUser(d.blockuser, true); } }
   else if (d.deluser) { if (confirm(L.confirmDel)) { closeModal(); removeUser(d.deluser, false); } }
   else if (d.moveclass !== undefined) moveClassForm();
+  else if (d.newyear !== undefined) newYearForm();
+  else if (d.delschool) { const inp = document.querySelector(`[data-sid="${d.delschool}"]`); if (inp && confirm(L.confirmDel)) { inp.value = ""; inp.closest(".srow").style.display = "none"; } }
   else if (d.delbook) { if (confirm(L.confirmDel)) deleteBook(d.delbook); }
   else if (d.checkgh !== undefined) { try { await GH.req(GH.repo()); toast(L.tokenOk); } catch (x) { toast(L.tokenBad); } }
   else if (d.close !== undefined) closeModal();
 });
 document.addEventListener("input", e => { if (e.target.id === "uq") { render.q = e.target.value; render.focus = true; render(); } });
-document.addEventListener("change", e => { if (e.target.id === "uf") { render.filter = e.target.value; render(); } });
+document.addEventListener("change", e => { if (e.target.id === "uf") { render.filter = e.target.value; render(); } if (e.target.id === "us") { render.school = e.target.value; render(); } });
 addEventListener("hashchange", () => { if (me) { handleReqLink(); render(); } });
 addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
 

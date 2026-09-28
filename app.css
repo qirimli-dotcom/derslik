@@ -227,3 +227,16 @@ h1,h2{font-family:var(--d);font-weight:700;letter-spacing:-.02em;margin:0;line-h
 .ftitle{font-size:20px;margin:0 0 2px}
 .alink{text-align:center;margin:0;color:var(--muted);font-size:15px}
 .alink button{color:var(--accent);font-weight:600;font-size:15px;padding:10px 4px;text-decoration:underline;text-underline-offset:3px}
+.pcard{display:flex;align-items:center;gap:16px;background:var(--card);border-radius:20px;padding:18px}
+.av.big{width:64px;height:64px;border-radius:32px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--d);font-weight:700;font-size:22px;flex-shrink:0}
+.pcard h2{font-size:20px}
+.prow{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--soft);font-size:15px}
+.prow:last-child{border-bottom:0}
+.prow span{color:var(--muted)}
+.prow b{font-weight:600;text-align:right}
+button.userline{background:none;border-radius:14px}
+button.userline>svg:last-child{width:18px;height:18px;color:#8A93A8}
+.chk{display:flex;align-items:center;gap:10px;font-size:15px}
+.chk input{width:22px;height:22px;accent-color:var(--accent)}
+.srow{display:flex;gap:8px;align-items:center}
+.srow input{flex:1;height:44px;border:1.5px solid var(--line);border-radius:12px;padding:0 12px;font-size:16px}
