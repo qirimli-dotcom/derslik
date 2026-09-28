@@ -21,6 +21,10 @@ window.L = {
   loading: "Açıla…", error: "Açılmadı. İnternetni teşkeriñiz.",
   nothing: "Hiç bir şey tapılmadı", offlineEmpty: "Yüklengen derslik yoq", marksEmpty: "Belgi yoq",
   install: "Ekranğa qoş", installIos: "Safari: «Поделиться» → «На экран Домой»",
+  installText: "Uyğulama kibi açılır ve internetsiz de işler", installBtn: "Nasıl?",
+  iosSafariSteps: ["Safari-de aşağıdaki (iPad-de yuqarıdaki) [share] «Поделиться» düğmesine basıñız", "Menüni aşağı çekip «На экран Домой» saylañız", "Yuqarıda «Добавить» basıñız — ekranda «Çantam» belgisi peyda olur"],
+  iosChromeSteps: ["Chrome-da adres satırında [share] «Поделиться» düğmesine basıñız", "«На экран Домой» saylañız", "«Добавить» basıñız — ekranda «Çantam» belgisi peyda olur"],
+  otherSteps: ["Brauzer menüsini açıñız (⋮ ya da ⋯)", "«Установить приложение» ya da «Добавить на главный экран» saylañız", "Tasdıqlañız — ekranda «Çantam» belgisi peyda olur"],
   helpText: ["Dersligiñni aç ve oqu.", "«Yükle» — internetsiz oqumaq içün.", "Belgi — kerekli saifeni saqla."],
 
   // Kiriş ve qayd
@@ -82,9 +86,9 @@ window.L = {
   allClasses: "Bütün sınıflar",
   moveClass: "Sınıfnı keçir", from: "Nereden", to: "Nereye",
   subject: "Ders", author: "Müellif", partLbl: "Qısım", file: "PDF fayl", addBook: "Derslik qoş",
-  saving: "Saqlana…", saved: "Saqlandı", confirmDel: "Silinsinmi?",
+  saving: "Saqlana…", uploading: "Yüklene…", encrypting: "Şifrelene…", saved: "Saqlandı", confirmDel: "Silinsinmi?",
   blockText: "Talebe silinir, sınıfnıñ açarı yañılanır.",
-  tooBig: "Fayl 95 MB-tan büyük",
+  tooBig: "Fayl 150 MB-tan büyük",
   needToken: "Evelâ Sazlamalarda GitHub token yazıñız",
   tokenBad: "Token ya da repo doğru degil",
   tokenOk: "Bağlantı yahşı",

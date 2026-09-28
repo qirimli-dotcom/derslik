@@ -20,14 +20,17 @@ const GH = {
   async raw(path) { return this.req(this.repo() + "/contents/" + path + "?ref=" + await this.branch() + "&t=" + Date.now(), { raw: true }); },
   async readJson(path, dflt) { try { return await (await this.raw(path)).json(); } catch (e) { if (e.status === 404) return dflt; throw e; } },
   async commit(files, message) {
-    const R = this.repo(), br = await this.branch();
-    const ref = await this.req(R + "/git/ref/heads/" + br), head = await this.req(R + "/git/commits/" + ref.object.sha), tree = [];
-    for (const [path, content] of Object.entries(files)) {
+    const R = this.repo(), br = await this.branch(), tree = [], list = Object.entries(files);
+    const big = list.filter(([, c]) => c && typeof c !== "string" && c.length > 1e6).length; let done = 0;
+    for (const [path, content] of list) {   // сначала файлы (долго), потом быстрый коммит
       if (content === null) { tree.push({ path, mode: "100644", type: "blob", sha: null }); continue; }
       const u8 = typeof content === "string" ? K.te.encode(content) : content;
-      const blob = await this.req(R + "/git/blobs", { method: "POST", body: JSON.stringify({ content: K.b64(u8), encoding: "base64" }) });
+      if (u8.length > 1e6) toast(L.uploading + " " + (big > 1 ? (++done) + "/" + big : "") + " (" + (u8.length / 1048576).toFixed(0) + " MB)");
+      let blob, tries = 0;
+      while (true) { try { blob = await this.req(R + "/git/blobs", { method: "POST", body: JSON.stringify({ content: K.b64(u8), encoding: "base64" }) }); break; } catch (e) { if (++tries >= 3 || e.status === 401 || e.status === 403) throw e; await new Promise(r => setTimeout(r, 3000)); } }
       tree.push({ path, mode: "100644", type: "blob", sha: blob.sha });
     }
+    const ref = await this.req(R + "/git/ref/heads/" + br), head = await this.req(R + "/git/commits/" + ref.object.sha);
     const t = await this.req(R + "/git/trees", { method: "POST", body: JSON.stringify({ base_tree: head.tree.sha, tree }) });
     const c = await this.req(R + "/git/commits", { method: "POST", body: JSON.stringify({ message, tree: t.sha, parents: [ref.object.sha] }) });
     await this.req(R + "/git/refs/heads/" + br, { method: "PATCH", body: JSON.stringify({ sha: c.sha }) });
@@ -162,8 +165,9 @@ async function keysFor(u) {
 async function rotate(g, files) {
   const raw = K.rnd(32), key = await K.importAes(raw, true), v = (CAT.kv[g] || 0) + 1;
   for (const b of CAT.books.filter(b => b.g === g)) {
-    const enc = new Uint8Array(await (await GH.raw(b.f)).arrayBuffer());
-    files[b.f] = await K.aesEnc(key, await K.aesDec(S.keys[g].key, enc)); b.kv = v;
+    const old = []; for (const p of K.partPaths(b)) old.push(new Uint8Array(await (await GH.raw(p)).arrayBuffer()));
+    const enc = await K.aesEnc(key, await K.aesDec(S.keys[g].key, K.join(old)));
+    const paths = K.partPaths(b); K.split(enc).forEach((part, i) => files[paths[i]] = part); b.kv = v;
   }
   CAT.kv[g] = v;
   for (const u of USERS.users) if (u.r !== "student" || u.g === g) { u.k = u.k || {}; u.k[g] = await K.wrapFor(u.pub, raw, v); }
@@ -282,14 +286,16 @@ async function saveBook(f) {
 async function uploadBook(f) {
   const fd = new FormData(f), file = fd.get("file");
   if (!file || !file.size) return;
-  if (file.size > 95 * 1024 * 1024) return toast(L.tooBig);
+  if (file.size > 150 * 1024 * 1024) return toast(L.tooBig);
   await busy(async () => {
     await freshData();
     const g = +fd.get("g"), id = Date.now().toString(36) + K.b64u(K.rnd(3));
-    const enc = await K.aesEnc(S.keys[g].key, new Uint8Array(await file.arrayBuffer()));
+    toast(L.encrypting);
+    const enc = await K.aesEnc(S.keys[g].key, new Uint8Array(await file.arrayBuffer())), chunks = K.split(enc);
     const b = { id, g, subject: fd.get("subject"), part: String(fd.get("part") || "").trim(), author: String(fd.get("author") || "").trim(), f: "books/g" + g + "/" + id + ".bin", kv: CAT.kv[g] || 1, size: file.size };
     const t = String(fd.get("t") || "").trim(); if (t) b.t = t;
-    const files = { [b.f]: enc };
+    if (chunks.length > 1) b.n = chunks.length;
+    const files = {}; K.partPaths(b).forEach((p, i) => files[p] = chunks[i]);
     await applyCover(fd, b, files);
     CAT.books.push(b);
     CAT.books.sort((a, c) => a.g - c.g || a.subject.localeCompare(c.subject) || String(a.part).localeCompare(String(c.part)));
@@ -302,7 +308,7 @@ async function deleteBook(id) {
     await freshData();
     const b = CAT.books.find(x => x.id === id); if (!b) return;
     CAT.books = CAT.books.filter(x => x.id !== id);
-    const files = { [b.f]: null, "data/catalog.json": json(CAT) }; if (b.c) files[b.c] = null;
+    const files = { "data/catalog.json": json(CAT) }; K.partPaths(b).forEach(p => files[p] = null); if (b.c) files[b.c] = null;
     await save(files, "Sil: " + title(b));
   });
 }
