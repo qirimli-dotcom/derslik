@@ -141,13 +141,14 @@ function fillStatic() {
   $("#topName").textContent = L.app;
   $("#sideName").innerHTML = esc(L.app).replace(" ", "<br>");
   $("#sideGradesLabel").textContent = L.grades;
-  $("#menuBtn").setAttribute("aria-label", L.menu); $("#menuTitle").textContent = L.menu; $("#menuClose").setAttribute("aria-label", L.close);
+  $("#menuBtn").setAttribute("aria-label", L.profile); $("#menuTitle").textContent = L.menu; $("#menuClose").setAttribute("aria-label", L.close);
   [["#rBack", L.back], ["#rZoomOut", L.zoomOut], ["#rZoomIn", L.zoomIn], ["#rMark", L.addMark], ["#rDl", L.download], ["#rPrev", L.prev], ["#rNext", L.next]].forEach(([s, t]) => $(s).setAttribute("aria-label", t));
 }
 function renderChrome() {
   if (!me) return;
   const tabs = [["shelf", "shelf", L.tabShelf], ["offline", "down", L.tabOffline], ["marks", "mark", L.tabMarks], ["profile", "user", L.profile]];
   $("#tabs").innerHTML = tabs.map(([v, i, t]) => `<button class="tab ${view === v ? "on" : ""}" data-view="${v}">${ico(i)}${esc(t)}</button>`).join("");
+  $("#menuBtn").innerHTML = esc(initials(me)); $("#menuBtn").classList.toggle("on", view === "profile");
   $("#sideUser").innerHTML = `<span class="av">${esc(initials(me))}</span><span class="t"><b>${esc(fullName(me))}</b>${schoolName(me.sc) ? `<small>${esc(schoolName(me.sc))}</small>` : ""}<small>${esc(clsLine(me))}</small></span>`;
   $("#sideUser").classList.toggle("on", view === "profile");
   $("#sideGradesLabel").hidden = $("#sideGrades").hidden = !isStaff();
@@ -158,19 +159,26 @@ function renderChrome() {
 }
 function coverHtml(b) {
   const src = K.coverSrc(b);   // фото поверх цветной обложки: если картинка не загрузится, останется цветная
-  return `<button class="book" data-open="${esc(b.id)}" aria-label="${esc(title(b) + ", " + L.grade(b.g))}"><div class="cover" style="--c:${color(b)}">
+  return `<button class="book" data-open="${esc(b.id)}" aria-label="${esc(title(b) + ", " + L.grade(b.g))}"><div class="cover${b.id === lastRead() ? " tagged" : ""}" style="--c:${color(b)}">
     <div><b>${esc(K.name(b))}</b>${b.part ? `<br><em>${esc(L.part(b.part))}</em>` : ""}</div><span class="g">${b.g}</span>
-    ${src ? `<img class="cimg" src="${esc(src)}" alt="" loading="lazy" onerror="this.remove()">` : ""}${downloaded.has(b.id) ? `<span class="ok">${ico("check")}</span>` : ""}</div></button>`;
+    ${b.id === lastRead() ? `<span class="cont-tag">${esc(L.contShort)}</span>` : ""}${src ? `<img class="cimg" src="${esc(src)}" alt="" decoding="async" onerror="this.remove()">` : ""}${downloaded.has(b.id) ? `<span class="ok">${ico("check")}</span>` : ""}</div></button>`;
 }
 function shelvesHtml(list) {
   const W = $("#view").clientWidth - 24, bw = wide.matches ? 124 : 98, gap = wide.matches ? 22 : 14;
   const per = Math.max(2, Math.floor((W + gap) / (bw + gap))); let out = "";
   for (let i = 0; i < list.length; i += per) {
     const row = list.slice(i, i + per);
-    out += `<div class="shelf" style="--bw:${bw}px;--gap:${gap}px"><div class="row">${row.map(coverHtml).join("")}</div><div class="plank"></div><div class="names">${row.map(b => `<span><b>${esc(K.name(b))}</b><i>${esc([b.part ? L.part(b.part) : "", b.author].filter(Boolean).join(" · "))}</i></span>`).join("")}</div></div>`;
+    out += `<div class="shelf" style="--bw:${bw}px;--gap:${gap}px"><div class="row">${row.map(coverHtml).join("")}</div><div class="plank"></div><div class="names">${row.map(b => `<span><b>${esc(K.name(b))}</b><i>${esc([b.t ? subj(b) : "", b.part ? L.part(b.part) : "", b.author].filter(Boolean).join(" · "))}</i>${progHtml(b)}</span>`).join("")}</div></div>`;
   }
   return out;
 }
+// прогресс чтения под обложкой: полоска и «saife 6 / 158»
+function progHtml(b) {
+  const page = store.get("page:" + b.id, 0), tot = store.get("tot:" + b.id, 0) || ((store.get("recent", []).find(r => r.id === b.id) || {}).total || 0);
+  if (!page || !tot) return "";
+  return `<em class="prog"><span class="bar"><i style="width:${Math.max(3, Math.round(page / tot * 100))}%"></i></span>${esc(L.page)} ${page} / ${tot}</em>`;
+}
+const lastRead = () => (store.get("recent", [])[0] || {}).id;
 function contHtml() {
   const rec = store.get("recent", []).map(r => ({ ...r, b: byId(r.id) })).filter(r => r.b && S.keys[r.b.g]).slice(0, 2);
   if (!rec.length) return "";
@@ -178,12 +186,21 @@ function contHtml() {
     return `<button class="cont" data-open="${esc(r.id)}"><div class="mini" style="--c:${color(r.b)}"></div><div class="t"><small>${esc(L.cont)}</small><b>${esc(title(r.b))}</b><div class="bar"><i style="width:${pct}%"></i></div><small>${esc(L.page)} ${r.page}${r.total ? " / " + r.total : ""}</small></div></button>`; }).join("")}</div>`;
 }
 let deferredPrompt = null;
+const installed = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 function installHtml() {
-  if (matchMedia("(display-mode: standalone)").matches || navigator.standalone) return "";
-  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  if (deferredPrompt) return `<div class="install"><svg class="logo"><use href="#logo"/></svg><div class="t">${esc(L.install)}</div><button class="btn" data-install>${esc(L.install)}</button></div>`;
-  if (ios) return `<div class="install"><svg class="logo"><use href="#logo"/></svg><div class="t"><b>${esc(L.install)}</b><br><span class="muted">${esc(L.installIos)}</span></div></div>`;
-  return "";
+  if (installed()) return "";
+  return `<div class="install"><svg class="logo"><use href="#logo"/></svg><div class="t"><b>${esc(L.install)}</b><br><span class="muted">${esc(L.installText)}</span></div>
+    <button class="btn" data-install>${esc(L.installBtn)}</button></div>`;
+}
+// iOS не даёт сайту ставить себя кнопкой — показываем, куда нажать
+const SHARE_ICO = `<svg viewBox="0 0 24 24" style="width:20px;height:20px;vertical-align:-4px;fill:none;stroke:#2F5BD3;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M12 3v12M8 7l4-4 4 4M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/></svg>`;
+function installHelp() {
+  const chrome = /crios/i.test(navigator.userAgent);
+  const steps = isIOS() ? (chrome ? L.iosChromeSteps : L.iosSafariSteps) : L.otherSteps;
+  $("#modalBox").innerHTML = `<h2>${esc(L.install)}</h2><ol class="steps">${steps.map(t => `<li>${esc(t).replace("[share]", SHARE_ICO)}</li>`).join("")}</ol>
+    <button class="btn-main" data-closemodal>${esc(L.close)}</button>`;
+  $("#modal").hidden = false;
 }
 const searchHtml = () => `<label class="search">${ico("search")}<input id="q" type="search" value="${esc(query)}" placeholder="${esc(L.search)}" aria-label="${esc(L.search)}" autocomplete="off"></label>`;
 function renderShelf() {
@@ -196,7 +213,7 @@ function renderShelf() {
   const head = wide.matches ? `<div class="hello"><div><h1>${esc(isStaff() ? clsName : L.tabShelf)}</h1><p>${esc(L.books(count))}</p></div>${searchHtml()}</div>`
     : `<div class="hello"><div><h1>${esc(L.hello + ", " + (me.n || "") + "!")}</h1><p>${esc(clsName + ", " + L.books(count))}</p></div>${searchHtml()}</div>`;
   const chips = isStaff() ? `<div class="chips">${GRADES.map(g => `<button class="chip ${g === grade ? "on" : ""}" data-grade="${g}">${g === grade ? esc(L.grade(g)) : g}</button>`).join("")}</div>` : "";
-  $("#view").innerHTML = head + chips + (q ? "" : contHtml()) + (list.length ? shelvesHtml(list) : `<p class="empty">${esc(q ? L.nothing : L.soonText)}</p>`) + installHtml();
+  $("#view").innerHTML = head + chips + (list.length ? shelvesHtml(list) : `<p class="empty">${esc(q ? L.nothing : L.soonText)}</p>`);
   const inp = $("#q"); if (inp && renderShelf.focus) { inp.focus(); inp.setSelectionRange(99, 99); }
   const chipOn = $(".chips .chip.on"); if (chipOn) chipOn.scrollIntoView({ inline: "center", block: "nearest" });
 }
@@ -209,25 +226,40 @@ function renderMarks() {
   $("#view").innerHTML = `<h1>${esc(L.tabMarks)}</h1>` + (marks.length ? `<div class="list">${marks.map((m, i) => `<div class="item"><div class="mini" style="--c:${color(m.b)}"></div><button class="t" data-open="${esc(m.id)}" data-page="${m.page}">${esc(title(m.b))}<small>${esc(L.grade(m.b.g))}, ${esc(L.page)} ${m.page}</small></button><button class="ib" data-unmark="${i}" aria-label="${esc(L.delMark)}">${ico("trash")}</button></div>`).join("")}</div>` : `<p class="empty">${esc(L.marksEmpty)}</p>`);
 }
 function renderHelp() {
-  $("#view").innerHTML = `<h1>${esc(L.help)}</h1><div class="list">${L.helpText.map(t => `<div class="item"><div class="t">${esc(t)}</div></div>`).join("")}</div>${installHtml()}<p class="muted">${esc(L.app)} — ${esc(L.slogan)}</p>`;
+  // инструкции: раскрывающиеся блоки; «Ekranğa qoş» — первым, пока приложение не установлено
+  const installed = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  const steps = isIOS() ? (/crios/i.test(navigator.userAgent) ? L.iosChromeSteps : L.iosSafariSteps) : L.otherSteps;
+  const block = (icon, t, body, open) => `<details class="form guide" ${open ? "open" : ""}><summary>${ico(icon)}<span>${esc(t)}</span></summary><div class="gbody">${body}</div></details>`;
+  const ol = arr => `<ol class="steps">${arr.map(x => `<li>${esc(x).replace("[share]", SHARE_ICO)}</li>`).join("")}</ol>`;
+  $("#view").innerHTML = `<h1>${esc(L.help)}</h1>` +
+    (installed ? "" : block("down", L.install, `<p class="muted" style="margin:0">${esc(L.installText)}</p>${ol(steps)}${deferredPrompt ? `<button class="btn-main" data-install>${esc(L.install)}</button>` : ""}`, true)) +
+    L.guide.map(g => block(g[0], g[1], ol(g[2]))).join("") +
+    `<p class="muted" style="text-align:center">${esc(L.app)} — ${esc(L.slogan)} · v${K.VER}</p>`;
 }
 function renderProfile() {
   const row = (k, v) => v ? `<div class="prow"><span>${esc(k)}</span><b>${esc(v)}</b></div>` : "";
   const mine = BOOKS().filter(b => me.r !== "student" || b.g === me.g).length;
+  const item = (icon, text, body, attrs = "", cls = "") => body
+    ? `<details class="pitem ${cls}"><summary>${ico(icon)}<span>${esc(text)}</span></summary><div class="pbody">${body}</div></details>`
+    : `<button class="pitem ${cls}" ${attrs}>${ico(icon)}<span>${esc(text)}</span></button>`;
   $("#view").innerHTML = `<h1 data-prof>${esc(L.profile)}</h1>
-    <div class="pcard"><div class="av big">${esc(initials(me))}</div><div><h2>${esc(fullName(me))}</h2><p class="muted" style="margin:4px 0 0">${esc(L.roles[me.r])}</p></div></div>
-    <div class="form">${row(L.school, schoolName(me.sc))}${me.r === "student" ? row(L.gradeLbl, L.cls(me.g, me.l)) : ""}${row(L.username, me.u)}${row(L.booksAdm, String(mine))}${row(L.tabOffline, String(downloaded.size))}</div>
-    <details class="form fixbox"><summary>${ico("user")} ${esc(L.fixReq)}</summary>
-      <form id="fFix" style="display:flex;flex-direction:column;gap:14px;margin-top:14px">
+    <div class="pcard"><div class="av big">${esc(initials(me))}</div><div><h2>${esc(fullName(me))}</h2><p class="muted" style="margin:4px 0 0">${esc([L.roles[me.r], schoolName(me.sc)].filter(Boolean).join(" · "))}</p></div></div>
+    <div class="form">${me.r === "student" ? row(L.gradeLbl, L.cls(me.g, me.l)) : ""}${row(L.username, me.u)}${row(L.booksAdm, String(mine))}${row(L.tabOffline, String(downloaded.size))}</div>
+    <div class="plist">
+      ${item("user", L.fixReq, `<form id="fFix" class="pform">
         <div class="two">${fld("n", L.name, `required maxlength="40" value="${esc(me.n || "")}"`)}${fld("s", L.surname, `required maxlength="60" value="${esc(me.s || "")}"`)}</div>
         ${(SCH.schools || []).length ? sel("sc", L.school, [["", L.pickSchool]].concat(SCH.schools.map(x => [x.id, x.name])), me.sc || "") : ""}
         ${me.r === "student" ? `<div class="two">${sel("g", L.gradeLbl, GRADES, me.g)}${sel("l", L.letter, LETTERS, me.l)}</div>` : ""}
         <p class="muted" style="margin:0;font-size:13px">${esc(L.fixHint)}</p>
-        <div class="err" id="fixErr"></div><button class="btn-main" type="submit">${esc(L.sendApp)}</button></form></details>
-    <form class="form" id="fPw"><h2 class="ftitle">${esc(L.changePass)}</h2>
-      ${fld("p", L.newPass, 'type="password" required minlength="8" autocomplete="new-password"')}${fld("p2", L.password2, 'type="password" required minlength="8" autocomplete="new-password"')}
-      <div class="err" id="pwErr"></div><button class="btn-main" type="submit">${esc(L.changePass)}</button></form>
-    <button class="btn-ghost" data-logout>${ico("out")} ${esc(L.logout)}</button>`;
+        <div class="err" id="fixErr"></div><button class="btn-main" type="submit">${esc(L.sendApp)}</button></form>`)}
+      ${item("key", L.changePass, `<form id="fPw" class="pform">
+        ${fld("p", L.newPass, 'type="password" required minlength="8" autocomplete="new-password"')}${fld("p2", L.password2, 'type="password" required minlength="8" autocomplete="new-password"')}
+        <div class="err" id="pwErr"></div><button class="btn-main" type="submit">${esc(L.changePass)}</button></form>`)}
+      ${item("help", L.help, "", 'data-view="help"')}
+      ${item("lang", L.lang + ": " + L.langName, "", "disabled")}
+      ${me.r === "admin" ? item("shield", L.cabinet, "", "data-cabinet") : ""}
+    </div>
+    <div class="plist">${item("out", L.logout, "", "data-logout", "danger")}</div>`;
 }
 async function sendFix(f) {   // просьба исправить имя / школу / класс — меняет администратор
   const d = Object.fromEntries(new FormData(f).entries()), err = $("#fixErr"), btn = f.querySelector("button[type=submit]");
@@ -268,6 +300,7 @@ function openMenu() {
     (rb && S.keys[rb.g] ? row(`data-mopen="${esc(rb.id)}"`, "book", L.cont, title(rb) + ", " + L.page + " " + rec.page) : "") +
     row('data-mview="offline"', "down", L.tabOffline, "", view === "offline") + row('data-mview="marks"', "mark", L.tabMarks, "", view === "marks") +
     (me.r === "admin" ? row("data-cabinet", "shield", L.cabinet, "") : "") +
+    (installed() ? "" : row("data-install", "down", L.install, L.installText)) +
     row('data-mview="help"', "lang", L.lang, L.langName) + row('data-mview="help"', "help", L.help, "", view === "help") + row("data-logout", "out", L.logout, "");
   $("#menu").hidden = false;
 }
@@ -278,10 +311,13 @@ const R = { book: null, pdf: null, page: 1, zoom: 1, task: [] };
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "pdfjs/pdf.worker.min.js";
 const spreadMode = () => wide.matches && innerWidth > innerHeight;
 async function getBookBytes(b) {
-  const c = await caches.open(BOOKS_CACHE), key = K.bookUrl(b);
-  let res = await c.match(key);
-  if (!res) { res = await fetch(key); if (!res.ok) throw new Error("net"); }
-  return K.aesDec(S.keys[b.g].key, await res.arrayBuffer());
+  const c = await caches.open(BOOKS_CACHE), parts = [], urls = K.partUrls(b);
+  for (let i = 0; i < urls.length; i++) {
+    let res = await c.match(urls[i]);
+    if (!res) { if (urls.length > 1) $("#stage").innerHTML = `<p class="placeholder muted">${esc(L.loading)} ${Math.round(i / urls.length * 100)}%</p>`; res = await fetch(urls[i]); if (!res.ok) throw new Error("net"); }
+    parts.push(new Uint8Array(await res.arrayBuffer()));
+  }
+  return K.aesDec(S.keys[b.g].key, K.join(parts));
 }
 async function openBook(id, page) {
   const b = byId(id); if (!b || !S.keys[b.g]) return;
@@ -338,6 +374,7 @@ function saveProgress() {
   store.set("page:" + b.id, R.page);
   const rec = store.get("recent", []).filter(r => r.id !== b.id);
   rec.unshift({ id: b.id, page: R.page, total: R.pdf.numPages }); store.set("recent", rec.slice(0, 6));
+  store.set("tot:" + b.id, R.pdf.numPages);
 }
 function closeReaderSilently() {
   if ($("#reader").hidden) return;
@@ -365,24 +402,24 @@ async function download(b) {
   $("#rDl span").textContent = "…";
   try {
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
-    const c = await caches.open(BOOKS_CACHE), key = K.bookUrl(b);
-    if (!(await c.match(key))) { const res = await fetch(key); if (!res.ok) throw 0; await c.put(key, res); }
+    const c = await caches.open(BOOKS_CACHE), urls = K.partUrls(b);
+    for (let i = 0; i < urls.length; i++) { $("#rDl span").textContent = urls.length > 1 ? Math.round(i / urls.length * 100) + "%" : "…"; if (!(await c.match(urls[i]))) { const res = await fetch(urls[i]); if (!res.ok) throw 0; await c.put(urls[i], res); } }
     downloaded.add(b.id); store.set("dl", [...downloaded]); toast(L.downloaded + ": " + title(b));
   } catch (e) { toast(L.error); }
   updateDl();
 }
 async function undownload(id) {
   const b = byId(id);
-  try { const c = await caches.open(BOOKS_CACHE); for (const r of await c.keys()) if (b && r.url.split("?")[0] === K.BASE + b.f) await c.delete(r); } catch (e) {}
+  try { const c = await caches.open(BOOKS_CACHE), own = new Set(b ? K.partPaths(b).map(p => K.BASE + p) : []); for (const r of await c.keys()) if (own.has(r.url.split("?")[0])) await c.delete(r); } catch (e) {}
   downloaded.delete(id); store.set("dl", [...downloaded]); render();
 }
 async function syncDownloads() {
   if (!("caches" in window)) return;
   try {
-    const c = await caches.open(BOOKS_CACHE), valid = new Set(BOOKS().map(K.bookUrl));
+    const c = await caches.open(BOOKS_CACHE), valid = new Set(BOOKS().flatMap(K.partUrls));
     for (const r of await c.keys()) if (!valid.has(r.url)) await c.delete(r);
     const keys = new Set((await c.keys()).map(r => r.url));
-    downloaded = new Set(BOOKS().filter(b => keys.has(K.bookUrl(b))).map(b => b.id)); store.set("dl", [...downloaded]);
+    downloaded = new Set(BOOKS().filter(b => K.partUrls(b).every(u => keys.has(u))).map(b => b.id)); store.set("dl", [...downloaded]);
   } catch (e) {}
 }
 
@@ -393,6 +430,7 @@ document.addEventListener("submit", e => {
   if (f.id === "fLogin") doLogin(f); else if (f.id === "fReg") doRegister(f); else if (f.id === "fPw") changePassword(f); else if (f.id === "fFix") sendFix(f);
 });
 document.addEventListener("click", async e => {
+  if (e.target.id === "modal") { $("#modal").hidden = true; return; }
   const t = e.target.closest("button,[data-open]"); if (!t) return;
   const d = t.dataset;
   if (d.auth) { if (d.auth === "register") await loadData().catch(() => {}); showAuth(d.auth); }
@@ -410,10 +448,12 @@ document.addEventListener("click", async e => {
   else if (d.mopen) openBook(d.mopen);
   else if (d.undl) undownload(d.undl);
   else if (d.unmark) { const m = store.get("marks", []); m.splice(+d.unmark, 1); store.set("marks", m); render(); }
-  else if (d.install !== undefined && deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; }
+  else if (d.install !== undefined) { closeMenu(); if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; } else installHelp(); }
+  else if (d.noinstall !== undefined) { store.set("noinstall", 1); render.force = true; render(); }
+  else if (d.closemodal !== undefined) $("#modal").hidden = true;
 });
 document.addEventListener("input", e => { if (e.target.id === "q") { query = e.target.value; renderShelf.focus = true; renderShelf(); renderShelf.focus = false; } });
-$("#menuBtn").onclick = openMenu; $("#menuClose").onclick = closeMenu;
+$("#menuBtn").onclick = () => go("profile"); $("#menuClose").onclick = closeMenu;
 $("#rBack").onclick = () => closeReader(false);
 $("#rPrev").onclick = () => step(-1); $("#rNext").onclick = () => step(1);
 $("#rRange").oninput = e => { $("#rNum").innerHTML = `<b>${e.target.value}</b> / ${R.pdf ? R.pdf.numPages : ""}`; };
@@ -431,7 +471,14 @@ addEventListener("keydown", e => {
 let sx = null, sy = 0;
 $("#stage").addEventListener("touchstart", e => { sx = e.touches.length === 1 && R.zoom === 1 ? e.touches[0].clientX : null; sy = e.touches[0].clientY; }, { passive: true });
 $("#stage").addEventListener("touchend", e => { if (sx === null) return; const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; sx = null; if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) step(dx < 0 ? 1 : -1); });
-let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (!$("#reader").hidden) { draw(); updateDl(); } else render(); }, 150); });
+// на телефоне при прокрутке прячется/показывается адресная строка и меняется высота окна —
+// перерисовываем полку только при смене ширины (поворот), иначе обложки «моргают»
+let rt, lastW = innerWidth, lastH = innerHeight;
+addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => {
+  const wChanged = innerWidth !== lastW, hBig = Math.abs(innerHeight - lastH) > 150; lastW = innerWidth; lastH = innerHeight;
+  if (!$("#reader").hidden) { if (wChanged || hBig) { draw(); updateDl(); } }
+  else if (wChanged) { render.force = true; render(); }
+}, 150); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden && S) refresh(); });
 
 async function refresh() {
