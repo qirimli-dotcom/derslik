@@ -148,6 +148,8 @@ function renderChrome() {
   if (!me) return;
   const tabs = [["shelf", "shelf", L.tabShelf], ["offline", "down", L.tabOffline], ["marks", "mark", L.tabMarks], ["profile", "user", L.profile]];
   $("#tabs").innerHTML = tabs.map(([v, i, t]) => `<button class="tab ${view === v ? "on" : ""}" data-view="${v}">${ico(i)}${esc(t)}</button>`).join("");
+  $("#sideUser").innerHTML = `<span class="av">${esc(initials(me))}</span><span class="t"><b>${esc(fullName(me))}</b>${schoolName(me.sc) ? `<small>${esc(schoolName(me.sc))}</small>` : ""}<small>${esc(clsLine(me))}</small></span>`;
+  $("#sideUser").classList.toggle("on", view === "profile");
   $("#sideGradesLabel").hidden = $("#sideGrades").hidden = !isStaff();
   $("#sideGrades").innerHTML = isStaff() ? GRADES.map(g => `<button class="chip ${g === grade && view === "shelf" ? "on" : ""}" data-grade="${g}">${g}</button>`).join("") : "";
   const links = tabs.map(t => t[0] === "offline" && downloaded.size ? [t[0], t[1], t[2] + ": " + downloaded.size] : t).concat([["help", "help", L.help]]);
