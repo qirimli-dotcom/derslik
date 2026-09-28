@@ -25,9 +25,10 @@ const GH = {
     for (const [path, content] of list) {   // сначала файлы (долго), потом быстрый коммит
       if (content === null) { tree.push({ path, mode: "100644", type: "blob", sha: null }); continue; }
       const u8 = typeof content === "string" ? K.te.encode(content) : content;
-      if (u8.length > 1e6) toast(L.uploading + " " + (big > 1 ? (++done) + "/" + big : "") + " (" + (u8.length / 1048576).toFixed(0) + " MB)");
+      if (u8.length > 1e6) { done++; toast(L.uploading + " " + Math.round(done / big * 100) + "% (" + done + "/" + big + ")"); }
       let blob, tries = 0;
-      while (true) { try { blob = await this.req(R + "/git/blobs", { method: "POST", body: JSON.stringify({ content: K.b64(u8), encoding: "base64" }) }); break; } catch (e) { if (++tries >= 3 || e.status === 401 || e.status === 403) throw e; await new Promise(r => setTimeout(r, 3000)); } }
+      while (true) { try { blob = await this.req(R + "/git/blobs", { method: "POST", body: JSON.stringify({ content: K.b64(u8), encoding: "base64" }) }); break; }
+        catch (e) { if (++tries >= 4 || e.status === 401 || e.status === 403) { e.message = "part " + done + "/" + big + ": " + (e.status || e.message); throw e; } await new Promise(r => setTimeout(r, 3000 * tries)); } }
       tree.push({ path, mode: "100644", type: "blob", sha: blob.sha });
     }
     const ref = await this.req(R + "/git/ref/heads/" + br), head = await this.req(R + "/git/commits/" + ref.object.sha);
@@ -153,7 +154,8 @@ function handleReqLink() {
 async function busy(fn) {
   if (!GH.cfg() || !GH.cfg().token) { toast(L.needToken); admTab = "settings"; return render(); }
   const v = $("#view"); v.style.opacity = ".5"; v.style.pointerEvents = "none"; toast(L.saving);
-  try { await fn(); } catch (e) { console.error(e); toast(e.status === 401 || e.status === 403 ? L.tokenBad : e.message === "big" ? L.tooBig : L.error + (e.status ? " (" + e.status + ")" : "")); }
+  try { await fn(); } catch (e) { console.error(e); const msg = e.status === 401 || e.status === 403 ? L.tokenBad : e.message === "big" ? L.tooBig : L.error + " — " + (e.message || e.status || e);
+    toast(msg); alert(msg); }
   v.style.opacity = ""; v.style.pointerEvents = ""; await idb.set("admsession", S).catch(() => {}); render();
 }
 async function save(files, msg) { await GH.commit(files, msg); toast(L.saved + ". " + L.deploying); }
@@ -165,9 +167,14 @@ async function keysFor(u) {
 async function rotate(g, files) {
   const raw = K.rnd(32), key = await K.importAes(raw, true), v = (CAT.kv[g] || 0) + 1;
   for (const b of CAT.books.filter(b => b.g === g)) {
-    const old = []; for (const p of K.partPaths(b)) old.push(new Uint8Array(await (await GH.raw(p)).arrayBuffer()));
-    const enc = await K.aesEnc(key, await K.aesDec(S.keys[g].key, K.join(old)));
-    const paths = K.partPaths(b); K.split(enc).forEach((part, i) => files[paths[i]] = part); b.kv = v;
+    const oldPaths = K.partPaths(b), old = [];
+    for (const p of oldPaths) old.push(new Uint8Array(await (await GH.raw(p)).arrayBuffer()));
+    const chunks = K.split(await K.aesEnc(key, await K.aesDec(S.keys[g].key, K.join(old))));
+    if (!b.f.endsWith(".bin")) b.f += ".bin";
+    if (chunks.length > 1) b.n = chunks.length; else delete b.n;
+    const paths = K.partPaths(b); chunks.forEach((part, i) => files[paths[i]] = part);
+    for (const p of oldPaths) if (!paths.includes(p)) files[p] = null;
+    b.kv = v;
   }
   CAT.kv[g] = v;
   for (const u of USERS.users) if (u.r !== "student" || u.g === g) { u.k = u.k || {}; u.k[g] = await K.wrapFor(u.pub, raw, v); }
@@ -370,6 +377,7 @@ function render() {
       <button class="btn-main" type="submit">${esc(L.save)}</button><button class="btn-ghost" type="button" data-checkgh>${esc(L.check)}</button></form>
       <form class="form" id="fIt"><h2 class="ftitle">${esc(L.apps)}</h2>${fld("it", L.reqToken, 'type="password" autocomplete="off" required', L.reqTokenHint)}
       <button class="btn-main" type="submit">${esc(L.save)}</button></form>
+      <p class="muted" style="margin:0;font-size:12px;text-align:center">v${K.VER}</p>
       <form class="form" id="fPass"><h2 class="ftitle">${esc(L.changePass)}</h2>${fld("old", L.oldPass, 'type="password" required autocomplete="current-password"')}${fld("p", L.newPass, 'type="password" required minlength="8" autocomplete="new-password"')}${fld("p2", L.password2, 'type="password" required minlength="8" autocomplete="new-password"')}
       <button class="btn-main" type="submit">${esc(L.changePass)}</button></form>`;
   }

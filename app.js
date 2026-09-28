@@ -217,7 +217,7 @@ function renderMarks() {
   $("#view").innerHTML = `<h1>${esc(L.tabMarks)}</h1>` + (marks.length ? `<div class="list">${marks.map((m, i) => `<div class="item"><div class="mini" style="--c:${color(m.b)}"></div><button class="t" data-open="${esc(m.id)}" data-page="${m.page}">${esc(title(m.b))}<small>${esc(L.grade(m.b.g))}, ${esc(L.page)} ${m.page}</small></button><button class="ib" data-unmark="${i}" aria-label="${esc(L.delMark)}">${ico("trash")}</button></div>`).join("")}</div>` : `<p class="empty">${esc(L.marksEmpty)}</p>`);
 }
 function renderHelp() {
-  $("#view").innerHTML = `<h1>${esc(L.help)}</h1><div class="list">${L.helpText.map(t => `<div class="item"><div class="t">${esc(t)}</div></div>`).join("")}</div>${installHtml()}<p class="muted">${esc(L.app)} — ${esc(L.slogan)}</p>`;
+  $("#view").innerHTML = `<h1>${esc(L.help)}</h1><div class="list">${L.helpText.map(t => `<div class="item"><div class="t">${esc(t)}</div></div>`).join("")}</div>${installHtml()}<p class="muted">${esc(L.app)} — ${esc(L.slogan)} · v${K.VER}</p>`;
 }
 function renderProfile() {
   const row = (k, v) => v ? `<div class="prow"><span>${esc(k)}</span><b>${esc(v)}</b></div>` : "";
