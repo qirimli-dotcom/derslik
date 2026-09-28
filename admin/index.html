@@ -3,21 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="cantam-root" content="../">
-<meta name="robots" content="noindex">
-<title>İdare — Derslik Çantam</title>
-<meta name="theme-color" content="#1B2233">
-<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="../icons/icon-180.png">
-<link rel="stylesheet" href="../app.css">
-<style>
-.adm-top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:calc(12px + var(--st)) calc(16px + var(--sr)) 12px calc(16px + var(--sl));background:#1B2233;color:#fff}
-.adm-top .logo{width:34px;height:34px}
-.adm-top b{font-family:var(--d);font-weight:700;font-size:17px;flex:1}
-.adm-top small{display:block;font-family:var(--b);font-weight:400;font-size:12px;color:#B8C1D6}
-.adm-top .ib{background:rgba(255,255,255,.12);color:#fff}
-.adm-main{max-width:900px;margin:0 auto;padding:18px calc(16px + var(--sr)) calc(40px + var(--sb)) calc(16px + var(--sl));display:flex;flex-direction:column;gap:16px}
-</style>
+<title>Derslik Çantam</title>
+<meta name="description" content="Bütün derslikler bir yerde">
+<meta name="theme-color" content="#2F5BD3">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Çantam">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="stylesheet" href="app.css">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -52,22 +48,63 @@
   </g>
 </svg>
 
+<div id="app">
+  <aside class="side">
+    <div class="brand"><svg class="logo"><use href="#logo"/></svg><b id="sideName"></b></div>
+    <button class="side-user" id="sideUser" data-view="profile"></button>
+    <div class="side-label" id="sideGradesLabel"></div>
+    <div class="side-grades" id="sideGrades"></div>
+    <div class="side-links" id="sideLinks"></div>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <div class="brand"><svg class="logo"><use href="#logo"/></svg><b id="topName"></b></div>
+      <button class="avbtn" id="menuBtn"></button>
+    </header>
+    <main id="view"></main>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</div>
+
+<div class="sheet" id="menu" hidden>
+  <div class="sheet-head"><h2 id="menuTitle"></h2><button class="ib" id="menuClose"><svg><use href="#i-x"/></svg></button></div>
+  <div id="menuBody"></div>
+</div>
+
+<div class="reader" id="reader" hidden>
+  <header class="rbar">
+    <button class="ib" id="rBack"><svg><use href="#i-back"/></svg></button>
+    <div class="rtitle"><b id="rTitle"></b><small id="rSub"></small></div>
+    <button class="ib wide-only" id="rZoomOut"><svg><use href="#i-minus"/></svg></button>
+    <button class="ib wide-only" id="rZoomIn"><svg><use href="#i-plus"/></svg></button>
+    <button class="ib" id="rMark"><svg><use href="#i-mark"/></svg></button>
+    <button class="ib dl" id="rDl"><svg><use href="#i-down"/></svg><span></span></button>
+  </header>
+  <div class="stage" id="stage"></div>
+  <footer class="rfoot" id="rFoot">
+    <button class="ib big" id="rPrev"><svg><use href="#i-back"/></svg></button>
+    <input type="range" id="rRange" min="1" max="1" value="1">
+    <div class="pnum" id="rNum"></div>
+    <button class="ib big accent" id="rNext"><svg><use href="#i-next"/></svg></button>
+  </footer>
+</div>
+
 <div class="auth" id="auth" hidden>
   <div class="auth-box">
     <div class="auth-brand"><svg class="logo"><use href="#logo"/></svg><h1 id="aTitle"></h1><p id="aSlogan"></p></div>
     <div id="authBody"></div>
   </div>
 </div>
-<div id="cab" hidden>
-  <header class="adm-top"><svg class="logo"><use href="#logo"/></svg><b id="cabTitle"></b>
-    <button class="ib" data-toapp id="toAppBtn"><svg><use href="#i-book"/></svg></button>
-    <button class="ib" data-logout id="outBtn"><svg><use href="#i-out"/></svg></button></header>
-  <main class="adm-main" id="view"></main>
-</div>
+
+<div class="modal" id="modal" hidden><div class="modal-box" id="modalBox"></div></div>
+
 <div class="modal" id="modal" hidden><div class="modal-box" id="modalBox"></div></div>
 <div class="toast" id="toast" role="status"></div>
-<script src="../strings.js"></script>
-<script src="../common.js"></script>
-<script src="admin.js"></script>
+
+<script src="strings.js"></script>
+<script src="qrcode.js"></script>
+<script src="common.js"></script>
+<script src="pdfjs/pdf.min.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

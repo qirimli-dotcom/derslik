@@ -9,7 +9,7 @@ window.L = {
   books: n => n + " derslik",
   part: p => p + "-nci qısım",
   search: "Derslik qıdır",
-  cont: "Oqumağa devam et", contShort: "Davam et",
+  cont: "Oqumağa devam et",
   page: "saife",
   tabShelf: "Raf", tabOffline: "İnternetsiz", tabMarks: "Belgiler",
   menu: "Menü", close: "Qapat", grades: "Sınıflar", change: "Deñiştir",
@@ -21,17 +21,6 @@ window.L = {
   loading: "Açıla…", error: "Açılmadı. İnternetni teşkeriñiz.",
   nothing: "Hiç bir şey tapılmadı", offlineEmpty: "Yüklengen derslik yoq", marksEmpty: "Belgi yoq",
   install: "Ekranğa qoş", installIos: "Safari: «Поделиться» → «На экран Домой»",
-  installText: "Uyğulama kibi açılır ve internetsiz de işler", installBtn: "Nasıl?",
-  iosSafariSteps: ["Safari-de aşağıdaki (iPad-de yuqarıdaki) [share] «Поделиться» düğmesine basıñız", "Menüni aşağı çekip «На экран Домой» saylañız", "Yuqarıda «Добавить» basıñız — ekranda «Çantam» belgisi peyda olur"],
-  iosChromeSteps: ["Chrome-da adres satırında [share] «Поделиться» düğmesine basıñız", "«На экран Домой» saylañız", "«Добавить» basıñız — ekranda «Çantam» belgisi peyda olur"],
-  otherSteps: ["Brauzer menüsini açıñız (⋮ ya da ⋯)", "«Установить приложение» ya da «Добавить на главный экран» saylañız", "Tasdıqlañız — ekranda «Çantam» belgisi peyda olur"],
-  guide: [
-    ["book", "Derslikni oqumaq", ["Raf bölüminde derslikniñ qapağına basıñız", "Saifelerni barmaq ile solğa-sağğa sürtip ya da ‹ › düğmeleri ile çeviriñiz", "Aşağıdaki çizgi ile kerekli saifege tez keçip olasıñız", "Planşetni yatqızsañız, eki saife yan-yana — kitap kibi açılır"]],
-    ["down", "İnternetsiz oqumaq", ["Derslikni açıñız", "Yuqarıda «Yükle» belgisine basıñız", "Qapaqta ✓ belgisi peyda olsa — derslik telefonda saqlandı", "Endi internet olmasa da açılır. Bu derslikler «İnternetsiz» bölüminde"]],
-    ["mark", "Belgiler", ["Kerekli saifede yuqarıdaki belgi düğmesine basıñız", "«Belgiler» bölüminden o saifege bir basmaq ile qaytıñız", "Belgiler tek bu telefonda saqlana"]],
-    ["user", "Profil ve parol", ["«Profil» bölüminde adıñız, mektebiñiz ve sınıfıñız körüne", "Yañlış olsa — «Maalümatnı tüzet» basıñız, idareci tasdıqlar", "Parolnı deñiştirmek içün — «Parolnı deñiştir», idareci tasdıqlağan soñ yañı parol işler"]],
-    ["help", "Bir şey işlemese", ["Uyğulamanı qapatıp, yañıdan açıñız (bazıda eki kere)", "Kompyuterde Ctrl+Shift+R basıñız", "Yañı derslikler bir-eki daqiqadan soñ peyda ola", "Yardım kerek olsa — ocañızğa ya da idarecige muracaat etiñiz"]]
-  ],
   helpText: ["Dersligiñni aç ve oqu.", "«Yükle» — internetsiz oqumaq içün.", "Belgi — kerekli saifeni saqla."],
 
   // Kiriş ve qayd
@@ -93,9 +82,9 @@ window.L = {
   allClasses: "Bütün sınıflar",
   moveClass: "Sınıfnı keçir", from: "Nereden", to: "Nereye",
   subject: "Ders", author: "Müellif", partLbl: "Qısım", file: "PDF fayl", addBook: "Derslik qoş",
-  saving: "Saqlana…", uploading: "Yüklene…", encrypting: "Şifrelene…", saved: "Saqlandı", confirmDel: "Silinsinmi?",
+  saving: "Saqlana…", saved: "Saqlandı", confirmDel: "Silinsinmi?",
   blockText: "Talebe silinir, sınıfnıñ açarı yañılanır.",
-  tooBig: "Fayl 150 MB-tan büyük",
+  tooBig: "Fayl 95 MB-tan büyük",
   needToken: "Evelâ Sazlamalarda GitHub token yazıñız",
   tokenBad: "Token ya da repo doğru degil",
   tokenOk: "Bağlantı yahşı",

@@ -88,6 +88,13 @@ K.fetchPublic = async (path, dflt) => {
   return r.json();
 };
 K.bookUrl = b => K.BASE + b.f + "?v=" + b.kv;
+// книги хранятся частями по 4 МБ: books/gN/id.0.bin, id.1.bin … (GitHub API обрывает долгие запросы)
+K.VER = "19";
+K.CHUNK = 4 * 1024 * 1024;
+K.partPaths = b => b.n ? Array.from({ length: b.n }, (_, i) => b.f.replace(/\.bin$/, "." + i + ".bin")) : [b.f];
+K.partUrls = b => K.partPaths(b).map(p => K.BASE + p + "?v=" + b.kv);
+K.split = u8 => { const out = []; for (let i = 0; i < u8.length; i += K.CHUNK) out.push(u8.subarray(i, i + K.CHUNK)); return out; };
+K.join = parts => { const o = new Uint8Array(parts.reduce((n, p) => n + p.length, 0)); let x = 0; for (const p of parts) { o.set(p, x); x += p.length; } return o; };
 K.json = o => JSON.stringify(o, null, 1);
 // токен «только заявки» хранится в data/config.json в перевёрнутом base64, чтобы его не отзывал сканер GitHub
 K.obf = t => btoa(t).split("").reverse().join("");
