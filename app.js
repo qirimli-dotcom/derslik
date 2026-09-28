@@ -158,19 +158,26 @@ function renderChrome() {
 }
 function coverHtml(b) {
   const src = K.coverSrc(b);   // фото поверх цветной обложки: если картинка не загрузится, останется цветная
-  return `<button class="book" data-open="${esc(b.id)}" aria-label="${esc(title(b) + ", " + L.grade(b.g))}"><div class="cover" style="--c:${color(b)}">
+  return `<button class="book" data-open="${esc(b.id)}" aria-label="${esc(title(b) + ", " + L.grade(b.g))}"><div class="cover${b.id === lastRead() ? " tagged" : ""}" style="--c:${color(b)}">
     <div><b>${esc(K.name(b))}</b>${b.part ? `<br><em>${esc(L.part(b.part))}</em>` : ""}</div><span class="g">${b.g}</span>
-    ${src ? `<img class="cimg" src="${esc(src)}" alt="" decoding="async" onerror="this.remove()">` : ""}${downloaded.has(b.id) ? `<span class="ok">${ico("check")}</span>` : ""}</div></button>`;
+    ${b.id === lastRead() ? `<span class="cont-tag">${esc(L.contShort)}</span>` : ""}${src ? `<img class="cimg" src="${esc(src)}" alt="" decoding="async" onerror="this.remove()">` : ""}${downloaded.has(b.id) ? `<span class="ok">${ico("check")}</span>` : ""}</div></button>`;
 }
 function shelvesHtml(list) {
   const W = $("#view").clientWidth - 24, bw = wide.matches ? 124 : 98, gap = wide.matches ? 22 : 14;
   const per = Math.max(2, Math.floor((W + gap) / (bw + gap))); let out = "";
   for (let i = 0; i < list.length; i += per) {
     const row = list.slice(i, i + per);
-    out += `<div class="shelf" style="--bw:${bw}px;--gap:${gap}px"><div class="row">${row.map(coverHtml).join("")}</div><div class="plank"></div><div class="names">${row.map(b => `<span><b>${esc(K.name(b))}</b><i>${esc([b.t ? subj(b) : "", b.part ? L.part(b.part) : "", b.author].filter(Boolean).join(" · "))}</i></span>`).join("")}</div></div>`;
+    out += `<div class="shelf" style="--bw:${bw}px;--gap:${gap}px"><div class="row">${row.map(coverHtml).join("")}</div><div class="plank"></div><div class="names">${row.map(b => `<span><b>${esc(K.name(b))}</b><i>${esc([b.t ? subj(b) : "", b.part ? L.part(b.part) : "", b.author].filter(Boolean).join(" · "))}</i>${progHtml(b)}</span>`).join("")}</div></div>`;
   }
   return out;
 }
+// прогресс чтения под обложкой: полоска и «saife 6 / 158»
+function progHtml(b) {
+  const page = store.get("page:" + b.id, 0), tot = store.get("tot:" + b.id, 0) || ((store.get("recent", []).find(r => r.id === b.id) || {}).total || 0);
+  if (!page || !tot) return "";
+  return `<em class="prog"><span class="bar"><i style="width:${Math.max(3, Math.round(page / tot * 100))}%"></i></span>${esc(L.page)} ${page} / ${tot}</em>`;
+}
+const lastRead = () => (store.get("recent", [])[0] || {}).id;
 function contHtml() {
   const rec = store.get("recent", []).map(r => ({ ...r, b: byId(r.id) })).filter(r => r.b && S.keys[r.b.g]).slice(0, 2);
   if (!rec.length) return "";
@@ -205,7 +212,7 @@ function renderShelf() {
   const head = wide.matches ? `<div class="hello"><div><h1>${esc(isStaff() ? clsName : L.tabShelf)}</h1><p>${esc(L.books(count))}</p></div>${searchHtml()}</div>`
     : `<div class="hello"><div><h1>${esc(L.hello + ", " + (me.n || "") + "!")}</h1><p>${esc(clsName + ", " + L.books(count))}</p></div>${searchHtml()}</div>`;
   const chips = isStaff() ? `<div class="chips">${GRADES.map(g => `<button class="chip ${g === grade ? "on" : ""}" data-grade="${g}">${g === grade ? esc(L.grade(g)) : g}</button>`).join("")}</div>` : "";
-  $("#view").innerHTML = head + chips + (q ? "" : contHtml()) + (list.length ? shelvesHtml(list) : `<p class="empty">${esc(q ? L.nothing : L.soonText)}</p>`);
+  $("#view").innerHTML = head + chips + (list.length ? shelvesHtml(list) : `<p class="empty">${esc(q ? L.nothing : L.soonText)}</p>`);
   const inp = $("#q"); if (inp && renderShelf.focus) { inp.focus(); inp.setSelectionRange(99, 99); }
   const chipOn = $(".chips .chip.on"); if (chipOn) chipOn.scrollIntoView({ inline: "center", block: "nearest" });
 }
@@ -360,6 +367,7 @@ function saveProgress() {
   store.set("page:" + b.id, R.page);
   const rec = store.get("recent", []).filter(r => r.id !== b.id);
   rec.unshift({ id: b.id, page: R.page, total: R.pdf.numPages }); store.set("recent", rec.slice(0, 6));
+  store.set("tot:" + b.id, R.pdf.numPages);
 }
 function closeReaderSilently() {
   if ($("#reader").hidden) return;

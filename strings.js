@@ -9,7 +9,7 @@ window.L = {
   books: n => n + " derslik",
   part: p => p + "-nci qısım",
   search: "Derslik qıdır",
-  cont: "Oqumağa devam et",
+  cont: "Oqumağa devam et", contShort: "Davam et",
   page: "saife",
   tabShelf: "Raf", tabOffline: "İnternetsiz", tabMarks: "Belgiler",
   menu: "Menü", close: "Qapat", grades: "Sınıflar", change: "Deñiştir",
