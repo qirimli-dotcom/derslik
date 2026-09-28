@@ -160,7 +160,7 @@ function coverHtml(b) {
   const src = K.coverSrc(b);   // фото поверх цветной обложки: если картинка не загрузится, останется цветная
   return `<button class="book" data-open="${esc(b.id)}" aria-label="${esc(title(b) + ", " + L.grade(b.g))}"><div class="cover" style="--c:${color(b)}">
     <div><b>${esc(K.name(b))}</b>${b.part ? `<br><em>${esc(L.part(b.part))}</em>` : ""}</div><span class="g">${b.g}</span>
-    ${src ? `<img class="cimg" src="${esc(src)}" alt="" loading="lazy" onerror="this.remove()">` : ""}${downloaded.has(b.id) ? `<span class="ok">${ico("check")}</span>` : ""}</div></button>`;
+    ${src ? `<img class="cimg" src="${esc(src)}" alt="" decoding="async" onerror="this.remove()">` : ""}${downloaded.has(b.id) ? `<span class="ok">${ico("check")}</span>` : ""}</div></button>`;
 }
 function shelvesHtml(list) {
   const W = $("#view").clientWidth - 24, bw = wide.matches ? 124 : 98, gap = wide.matches ? 22 : 14;
@@ -445,7 +445,14 @@ addEventListener("keydown", e => {
 let sx = null, sy = 0;
 $("#stage").addEventListener("touchstart", e => { sx = e.touches.length === 1 && R.zoom === 1 ? e.touches[0].clientX : null; sy = e.touches[0].clientY; }, { passive: true });
 $("#stage").addEventListener("touchend", e => { if (sx === null) return; const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; sx = null; if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) step(dx < 0 ? 1 : -1); });
-let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (!$("#reader").hidden) { draw(); updateDl(); } else render(); }, 150); });
+// на телефоне при прокрутке прячется/показывается адресная строка и меняется высота окна —
+// перерисовываем полку только при смене ширины (поворот), иначе обложки «моргают»
+let rt, lastW = innerWidth, lastH = innerHeight;
+addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => {
+  const wChanged = innerWidth !== lastW, hBig = Math.abs(innerHeight - lastH) > 150; lastW = innerWidth; lastH = innerHeight;
+  if (!$("#reader").hidden) { if (wChanged || hBig) { draw(); updateDl(); } }
+  else if (wChanged) { render.force = true; render(); }
+}, 150); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden && S) refresh(); });
 
 async function refresh() {
