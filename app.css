@@ -249,3 +249,6 @@ button.userline>svg:last-child{width:18px;height:18px;color:#8A93A8}
   .side-user b{font-weight:600;font-size:15px;line-height:1.2}
   .side-user small{font-size:13px;color:var(--muted);line-height:1.25}
 }
+.fixbox summary{cursor:pointer;display:flex;align-items:center;gap:8px;font-weight:600;list-style:none}
+.fixbox summary::-webkit-details-marker{display:none}
+.fixbox summary svg{width:20px;height:20px;color:var(--accent)}

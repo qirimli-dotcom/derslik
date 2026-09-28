@@ -121,7 +121,7 @@ function enterCab() {
 function parseReq(text) {
   const m = String(text).match(/req=([A-Za-z0-9_-]+)/) || String(text).trim().match(/^([A-Za-z0-9_-]{100,})$/);
   if (!m) return null;
-  try { const r = JSON.parse(K.td.decode(K.ub64(m[1]))); return r && r.u && r.pub && r.ep && r.salt ? r : null; } catch (e) { return null; }
+  try { const r = JSON.parse(K.td.decode(K.ub64(m[1]))); return r && r.u && r.pub && (r.fix || (r.ep && r.salt)) ? r : null; } catch (e) { return null; }
 }
 async function syncIssues() {   // заявки, которые ученики отправили автоматически
   try {
@@ -132,7 +132,7 @@ async function syncIssues() {   // заявки, которые ученики �
       if (!String(i.title || "").startsWith(K.REQ_TAG)) continue;
       const r = parseReq(i.body || ""); if (!r) continue;
       r._issue = i.number;
-      if (!cur.some(x => x.u === r.u && x.pub === r.pub)) { cur.unshift(r); changed = true; }
+      if (!cur.some(x => x.u === r.u && x.pub === r.pub && x.t === r.t)) { cur.unshift(r); changed = true; }
     }
     if (changed) { store.set("reqs", cur); render(); }
   } catch (e) { console.warn("issues", e); }
@@ -141,7 +141,7 @@ async function closeIssue(r) {
   if (!r || !r._issue) return;
   try { const cfg = await K.config(); await K.issuesApi(cfg, "/" + r._issue, { method: "PATCH", body: JSON.stringify({ state: "closed" }) }); } catch (e) {}
 }
-function addReq(r) { store.set("reqs", [r].concat(reqs().filter(x => !(x.u === r.u && x.pub === r.pub)))); }
+function addReq(r) { store.set("reqs", [r].concat(reqs().filter(x => !(x.u === r.u && x.pub === r.pub && !!x.fix === !!r.fix)))); }
 function handleReqLink() {
   const r = parseReq(location.hash); if (!r) return;
   history.replaceState(null, "", location.pathname + location.search);
@@ -170,6 +170,7 @@ async function rotate(g, files) {
   S.keys[g] = { v, key };
 }
 async function approve(r) {
+  if (r.fix) return approveFix(r);
   await busy(async () => {
     await freshData();
     const old = USERS.users.find(x => x.u === r.u);
@@ -184,6 +185,20 @@ async function approve(r) {
     await closeIssue(r);
   });
 }
+async function approveFix(r) {   // исправление данных ученика по его просьбе
+  await busy(async () => {
+    await freshData();
+    const u = USERS.users.find(x => x.u === r.u && x.pub === r.pub);
+    if (u) {
+      const cls = u.g !== +r.g || u.l !== r.l;
+      u.n = r.n; u.s = r.s; u.sc = r.sc || ""; u.g = +r.g || 0; u.l = r.l || "";
+      if (cls) u.k = await keysFor(u);
+      await save({ "data/users.json": json(USERS) }, "Tüzetüv: " + r.u);
+    }
+    store.set("reqs", reqs().filter(x => !(x.u === r.u && x.t === r.t)));
+    await closeIssue(r);
+  });
+}
 async function removeUser(id, block) {
   await busy(async () => {
     await freshData();
@@ -195,11 +210,11 @@ async function removeUser(id, block) {
     await save(files, (block ? "Blok: " : "Sil: ") + id);
   });
 }
-async function editUserSave(id, g, l, r, sc) {
+async function editUserSave(id, g, l, r, sc, n, sn) {
   await busy(async () => {
     await freshData();
     const u = USERS.users.find(x => x.u === id); if (!u) return;
-    u.g = g; u.l = l; u.r = r; u.sc = sc || ""; u.k = await keysFor(u);
+    u.g = g; u.l = l; u.r = r; u.sc = sc || ""; if (n) u.n = n; u.s = sn || ""; u.k = await keysFor(u);
     await save({ "data/users.json": json(USERS) }, "Deñişiklik: " + id);
   });
 }
@@ -261,7 +276,9 @@ function render() {
   if (admTab === "apps") {
     h += `<form class="form" id="fPaste"><label class="fld"><span>${esc(L.pasteCode)}</span><input name="code" autocomplete="off" autocapitalize="none"></label><button class="btn-ghost" type="submit">${esc(L.addApp)}</button></form>` +
       (n ? `<div class="list">${reqs().map((r, i) => { const ex = USERS.users.some(x => x.u === r.u);
-        return userRow({ n: r.n, s: r.s, g: r.g, l: r.l, sc: r.sc, u: r.u + (r.pw ? " · " + L.pwReq : ex ? " ⚠" : ""), r: r.r === "teacher" ? "teacher" : "student" }, `<button class="sbtn no" data-rejectreq="${i}">${esc(L.reject)}</button><button class="sbtn ok" data-approvereq="${i}">${esc(L.approve)}</button>`, "stack"); }).join("")}</div>`
+        const o = USERS.users.find(x => x.u === r.u);
+        const was = r.fix && o ? " · " + L.fixTag + " (" + L.was + ": " + [fullName(o), schoolName(o.sc), o.g ? L.cls(o.g, o.l) : ""].filter(Boolean).join(", ") + ")" : "";
+        return userRow({ n: r.n, s: r.s, g: r.g, l: r.l, sc: r.sc, u: r.u + (r.pw ? " · " + L.pwReq : r.fix ? was : ex ? " ⚠" : ""), r: r.r === "teacher" ? "teacher" : "student" }, `<button class="sbtn no" data-rejectreq="${i}">${esc(L.reject)}</button><button class="sbtn ok" data-approvereq="${i}">${esc(L.approve)}</button>`, "stack"); }).join("")}</div>`
       : `<p class="empty">${esc(L.noApps)}</p>`);
   } else if (admTab === "students") {
     const classes = [...new Set(USERS.users.filter(u => u.g).map(classOf))].sort((a, b) => parseInt(a) - parseInt(b) || a.localeCompare(b));
@@ -301,6 +318,7 @@ function editUser(id) {
   const self = u.u === me.u;
   modal(`<div class="userline" style="padding:0"><div class="av">${esc(initials(u))}</div><div class="t"><b>${esc(fullName(u))}</b><small>${u.g ? esc(L.cls(u.g, u.l)) + " · " : ""}${esc(u.u)}</small></div></div>
     <form class="form" id="fUser" data-id="${esc(u.u)}" style="padding:0">
+      <div class="two">${fld("n", L.name, `required value="${esc(u.n || "")}"`)}${fld("s", L.surname, `value="${esc(u.s || "")}"`)}</div>
       ${(SCH.schools || []).length ? sel("sc", L.school, [["", "—"]].concat(SCH.schools.map(x => [x.id, x.name])), u.sc || "") : ""}
       <div class="two">${sel("g", L.gradeLbl, [[0, "—"]].concat(GRADES.map(g => [g, g])), u.g)}${sel("l", L.letter, [["", "—"]].concat(LETTERS.map(l => [l, l])), u.l)}</div>
       ${self ? "" : sel("r", L.role, Object.entries(L.roles), u.r)}
@@ -351,7 +369,7 @@ document.addEventListener("submit", e => {
   else if (f.id === "fPass") changePass(f);
   else if (f.id === "fIt") { const tok = f.it.value.trim(); busy(async () => { const g = GH.cfg(), cfg = { repo: g.repo, it: K.obf(tok) }; if (g.api) cfg.api = g.api;
     await K.issuesApi(cfg, "?per_page=1"); await save({ "data/config.json": json(cfg) }, "Arıza tokeni"); }); }
-  else if (f.id === "fUser") { closeModal(); const u = USERS.users.find(x => x.u === f.dataset.id); editUserSave(f.dataset.id, +f.g.value, f.l.value, f.r ? f.r.value : u.r, f.sc ? f.sc.value : u.sc); }
+  else if (f.id === "fUser") { closeModal(); const u = USERS.users.find(x => x.u === f.dataset.id); editUserSave(f.dataset.id, +f.g.value, f.l.value, f.r ? f.r.value : u.r, f.sc ? f.sc.value : u.sc, f.n.value.trim(), f.s.value.trim()); }
   else if (f.id === "fMove") { closeModal(); moveClass(f.from.value, f.to.value); }
   else if (f.id === "fYear") { const sc = f.sc ? f.sc.value : "", del = f.del.checked; closeModal(); newYear(sc, del); }
   else if (f.id === "fSchools") { const names = [...f.querySelectorAll("[data-sid]")].map(i => ({ id: i.dataset.sid, name: i.value.trim() })).filter(x => x.name);

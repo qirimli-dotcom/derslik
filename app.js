@@ -212,14 +212,28 @@ function renderHelp() {
 function renderProfile() {
   const row = (k, v) => v ? `<div class="prow"><span>${esc(k)}</span><b>${esc(v)}</b></div>` : "";
   const mine = BOOKS().filter(b => me.r !== "student" || b.g === me.g).length;
-  $("#view").innerHTML = `<h1>${esc(L.profile)}</h1>
+  $("#view").innerHTML = `<h1 data-prof>${esc(L.profile)}</h1>
     <div class="pcard"><div class="av big">${esc(initials(me))}</div><div><h2>${esc(fullName(me))}</h2><p class="muted" style="margin:4px 0 0">${esc(L.roles[me.r])}</p></div></div>
     <div class="form">${row(L.school, schoolName(me.sc))}${me.r === "student" ? row(L.gradeLbl, L.cls(me.g, me.l)) : ""}${row(L.username, me.u)}${row(L.booksAdm, String(mine))}${row(L.tabOffline, String(downloaded.size))}</div>
-    <p class="muted" style="margin:0;font-size:14px">${esc(L.profileHint)}</p>
+    <details class="form fixbox"><summary>${ico("user")} ${esc(L.fixReq)}</summary>
+      <form id="fFix" style="display:flex;flex-direction:column;gap:14px;margin-top:14px">
+        <div class="two">${fld("n", L.name, `required maxlength="40" value="${esc(me.n || "")}"`)}${fld("s", L.surname, `required maxlength="60" value="${esc(me.s || "")}"`)}</div>
+        ${(SCH.schools || []).length ? sel("sc", L.school, [["", L.pickSchool]].concat(SCH.schools.map(x => [x.id, x.name])), me.sc || "") : ""}
+        ${me.r === "student" ? `<div class="two">${sel("g", L.gradeLbl, GRADES, me.g)}${sel("l", L.letter, LETTERS, me.l)}</div>` : ""}
+        <p class="muted" style="margin:0;font-size:13px">${esc(L.fixHint)}</p>
+        <div class="err" id="fixErr"></div><button class="btn-main" type="submit">${esc(L.sendApp)}</button></form></details>
     <form class="form" id="fPw"><h2 class="ftitle">${esc(L.changePass)}</h2>
       ${fld("p", L.newPass, 'type="password" required minlength="8" autocomplete="new-password"')}${fld("p2", L.password2, 'type="password" required minlength="8" autocomplete="new-password"')}
       <div class="err" id="pwErr"></div><button class="btn-main" type="submit">${esc(L.changePass)}</button></form>
     <button class="btn-ghost" data-logout>${ico("out")} ${esc(L.logout)}</button>`;
+}
+async function sendFix(f) {   // просьба исправить имя / школу / класс — меняет администратор
+  const d = Object.fromEntries(new FormData(f).entries()), err = $("#fixErr"), btn = f.querySelector("button[type=submit]");
+  const req = { v: 1, fix: 1, u: me.u, pub: me.pub, n: d.n.trim(), s: d.s.trim(), sc: d.sc != null ? d.sc : me.sc || "", g: d.g ? +d.g : me.g, l: d.l || me.l, r: me.r, t: Date.now() };
+  if (!req.n || !req.s) return err.textContent = L.errFill;
+  btn.disabled = true;
+  if (await sendReq({ req }, true)) { toast(L.fixSent); f.closest("details").open = false; err.textContent = ""; } else err.textContent = L.errNet;
+  btn.disabled = false;
 }
 async function changePassword(f) {
   const err = $("#pwErr"), d = { u: me.u, p: f.p.value, p2: f.p2.value }, bad = K.checkNewUser(d);
@@ -237,9 +251,11 @@ async function changePassword(f) {
 function render() {
   if (!me) return;
   renderChrome();
+  if (view === "profile" && $("#view [data-prof]") && !render.force) return;   // не сбрасывать формы профиля при фоновом обновлении
+  render.force = false;
   ({ shelf: renderShelf, offline: renderOffline, marks: renderMarks, help: renderHelp, profile: renderProfile }[view] || renderShelf)();
 }
-function go(v) { view = v; query = ""; render(); window.scrollTo(0, 0); $(".main").scrollTop = 0; }
+function go(v) { view = v; query = ""; render.force = true; render(); window.scrollTo(0, 0); $(".main").scrollTop = 0; }
 function setGrade(g) { grade = g; store.set("grade", g); go("shelf"); }
 
 function openMenu() {
@@ -372,7 +388,7 @@ async function syncDownloads() {
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredPrompt = e; render(); });
 document.addEventListener("submit", e => {
   const f = e.target; e.preventDefault();
-  if (f.id === "fLogin") doLogin(f); else if (f.id === "fReg") doRegister(f); else if (f.id === "fPw") changePassword(f);
+  if (f.id === "fLogin") doLogin(f); else if (f.id === "fReg") doRegister(f); else if (f.id === "fPw") changePassword(f); else if (f.id === "fFix") sendFix(f);
 });
 document.addEventListener("click", async e => {
   const t = e.target.closest("button,[data-open]"); if (!t) return;
