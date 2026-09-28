@@ -165,7 +165,7 @@ function coverHtml(b) {
     ${b.id === lastRead() ? `<span class="cont-tag">${esc(L.contShort)}</span>` : ""}${src ? `<img class="cimg" src="${esc(src)}" alt="" decoding="async" onerror="this.remove()">` : ""}${downloaded.has(b.id) ? `<span class="ok">${ico("check")}</span>` : ""}</div></button>`;
 }
 function shelvesHtml(list) {
-  const W = $("#view").clientWidth - 24, bw = wide.matches ? 124 : 98, gap = wide.matches ? 22 : 14;
+  const W = $("#view").clientWidth - 24, mid = innerWidth >= 600, bw = wide.matches || mid ? 124 : 98, gap = wide.matches || mid ? 22 : 14;   // планшет вертикально — крупные обложки
   const per = Math.max(2, Math.floor((W + gap) / (bw + gap))); let out = "";
   for (let i = 0; i < list.length; i += per) {
     const row = list.slice(i, i + per);

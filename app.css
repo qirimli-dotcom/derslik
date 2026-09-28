@@ -299,3 +299,9 @@ button.pitem:disabled::after{content:""}
 .pbody{padding:0 16px 16px}
 .pform{display:flex;flex-direction:column;gap:14px}
 @media (min-width:900px){.top{display:none}}
+@media (min-width:600px) and (max-width:899px){
+  #view{padding-left:calc(32px + var(--sl));padding-right:calc(32px + var(--sr))}
+  .top{padding-left:calc(32px + var(--sl));padding-right:calc(32px + var(--sr))}
+  .names span{font-size:13px}.names b{font-size:14px}.names i{font-size:12px}
+  .cover b{font-size:15px}
+}

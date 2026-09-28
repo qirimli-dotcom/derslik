@@ -89,7 +89,7 @@ K.fetchPublic = async (path, dflt) => {
 };
 K.bookUrl = b => K.BASE + b.f + "?v=" + b.kv;
 // книги хранятся частями по 4 МБ: books/gN/id.0.bin, id.1.bin … (GitHub API обрывает долгие запросы)
-K.VER = "20";
+K.VER = "21";
 K.CHUNK = 4 * 1024 * 1024;
 K.partPaths = b => b.n ? Array.from({ length: b.n }, (_, i) => b.f.replace(/\.bin$/, "." + i + ".bin")) : [b.f];
 K.partUrls = b => K.partPaths(b).map(p => K.BASE + p + "?v=" + b.kv);
