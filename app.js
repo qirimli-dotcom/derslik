@@ -167,7 +167,7 @@ function shelvesHtml(list) {
   const per = Math.max(2, Math.floor((W + gap) / (bw + gap))); let out = "";
   for (let i = 0; i < list.length; i += per) {
     const row = list.slice(i, i + per);
-    out += `<div class="shelf" style="--bw:${bw}px;--gap:${gap}px"><div class="row">${row.map(coverHtml).join("")}</div><div class="plank"></div><div class="names">${row.map(b => `<span><b>${esc(K.name(b))}</b><i>${esc([b.part ? L.part(b.part) : "", b.author].filter(Boolean).join(" · "))}</i></span>`).join("")}</div></div>`;
+    out += `<div class="shelf" style="--bw:${bw}px;--gap:${gap}px"><div class="row">${row.map(coverHtml).join("")}</div><div class="plank"></div><div class="names">${row.map(b => `<span><b>${esc(K.name(b))}</b><i>${esc([b.t ? subj(b) : "", b.part ? L.part(b.part) : "", b.author].filter(Boolean).join(" · "))}</i></span>`).join("")}</div></div>`;
   }
   return out;
 }

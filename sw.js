@@ -1,4 +1,4 @@
-const V = "cantam-v11";
+const V = "cantam-v12";
 const SHELL = V + "-shell";
 const BOOKS = "cantam-books";
 const FILES = [
