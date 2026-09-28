@@ -190,8 +190,9 @@ function renderShelf() {
   const q = query.trim().toLowerCase(), all = BOOKS();
   const list = all.filter(b => q ? (title(b) + " " + (b.author || "") + " " + b.g).toLowerCase().includes(q) : b.g === grade);
   const count = all.filter(b => b.g === grade).length;
-  const clsName = (isStaff() ? L.grade(grade) : L.cls(me.g, me.l)) + (schoolName(me.sc) ? " · " + schoolName(me.sc) : "");
-  const head = wide.matches ? `<div class="hello"><div><h1>${esc(clsName)}</h1><p>${esc(L.books(count))}</p></div>${searchHtml()}</div>`
+  const clsName = isStaff() ? L.grade(grade) : L.cls(me.g, me.l);
+  // на планшете и компьютере имя, школа и класс уже в боковой панели — в шапке только раздел
+  const head = wide.matches ? `<div class="hello"><div><h1>${esc(isStaff() ? clsName : L.tabShelf)}</h1><p>${esc(L.books(count))}</p></div>${searchHtml()}</div>`
     : `<div class="hello"><div><h1>${esc(L.hello + ", " + (me.n || "") + "!")}</h1><p>${esc(clsName + ", " + L.books(count))}</p></div>${searchHtml()}</div>`;
   const chips = isStaff() ? `<div class="chips">${GRADES.map(g => `<button class="chip ${g === grade ? "on" : ""}" data-grade="${g}">${g === grade ? esc(L.grade(g)) : g}</button>`).join("")}</div>` : "";
   $("#view").innerHTML = head + chips + (q ? "" : contHtml()) + (list.length ? shelvesHtml(list) : `<p class="empty">${esc(q ? L.nothing : L.soonText)}</p>`) + installHtml();
