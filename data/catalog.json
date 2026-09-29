@@ -15,6 +15,20 @@
  },
  "books": [
   {
+   "id": "mumgskqbUu3E",
+   "g": 2,
+   "subject": "edb",
+   "part": "1",
+   "author": "Klimanova",
+   "f": "books/g2/mumgskqbUu3E.bin",
+   "kv": 2,
+   "size": 9817698,
+   "t": "Литературное чтение 2 sinif",
+   "n": 3,
+   "c": "covers/mumgskqbUu3E.jpg",
+   "cv": 1
+  },
+  {
    "id": "mumgntwedF8j",
    "g": 2,
    "subject": "eng",
