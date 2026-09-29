@@ -15,6 +15,20 @@
  },
  "books": [
   {
+   "id": "mumg8d2nz_fX",
+   "g": 2,
+   "subject": "mat",
+   "part": "1",
+   "author": "Moro",
+   "f": "books/g2/mumg8d2nz_fX.bin",
+   "kv": 2,
+   "size": 15168552,
+   "t": "Математика 2 sinif",
+   "n": 4,
+   "c": "covers/mumg8d2nz_fX.jpg",
+   "cv": 1
+  },
+  {
    "id": "mukzohdd-fHC",
    "g": 5,
    "subject": "bio",
